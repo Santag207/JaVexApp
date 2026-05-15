@@ -34,10 +34,45 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Trigger LoginRequested event
     context.read<AuthBloc>().add(
           LoginRequested(email: email, password: password),
         );
+  }
+
+  Future<void> _askToEnableBiometric(BuildContext context) async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Inicio con huella o rostro'),
+        content: const Text(
+          '¿Quieres activar el inicio con huella o rostro para tu próxima sesión? '
+          'Tu huella o rostro nunca sale de tu dispositivo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Ahora no'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Activar'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (accepted == true) {
+      context.read<AuthBloc>().add(const BiometricEnableRequested());
+    } else {
+      // Si el usuario rechaza, emulamos el "completar login normal" forzando
+      // un AuthAuthenticated re-emit a través del bloc actual.
+      // La forma simple: simplemente navegar al menú. El estado en memoria
+      // ya tiene al usuario; el menú podrá leerlo si lo necesita.
+      context.go('/menu');
+    }
   }
 
   @override
@@ -46,12 +81,15 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.black,
       body: BlocListener<AuthBloc, AuthState>(
         listenWhen: (previous, current) {
-          return current is AuthAuthenticated || current is AuthError;
+          return current is AuthAuthenticated ||
+              current is AuthAuthenticatedAwaitingBiometricChoice ||
+              current is AuthError;
         },
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            // Navigate to menu on successful login
             context.go('/menu');
+          } else if (state is AuthAuthenticatedAwaitingBiometricChoice) {
+            _askToEnableBiometric(context);
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message)),
@@ -65,14 +103,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo
                     Image.asset(
                       'assets/logo.png',
                       height: 220,
                       width: 220,
                     ),
                     const SizedBox(height: 20),
-                    // Container with login form
                     Container(
                       padding: const EdgeInsets.all(16.0),
                       margin: const EdgeInsets.symmetric(horizontal: 20.0),
