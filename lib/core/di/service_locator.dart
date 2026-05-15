@@ -16,6 +16,8 @@ import '../../features/pending/bloc/pending_bloc.dart';
 import '../../features/profile/bloc/profile_bloc.dart';
 import '../../features/inventory/bloc/inventory_bloc.dart';
 import '../../features/add_hours/bloc/add_hours_bloc.dart';
+import '../services/biometric_service.dart';
+import '../services/secure_storage_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -25,9 +27,17 @@ void setupServiceLocator() {
   // API Service
   getIt.registerSingleton<ApiService>(DioApiService());
 
+  // Servicios de seguridad y biometría
+  getIt.registerSingleton<SecureStorageService>(SecureStorageService());
+  getIt.registerSingleton<BiometricService>(BiometricService());
+
   // Repositories
   getIt.registerSingleton<AuthRepository>(
-    AuthRepositoryImpl(getIt<ApiService>()),
+    AuthRepositoryImpl(
+      getIt<ApiService>(),
+      getIt<SecureStorageService>(),
+      getIt<BiometricService>(),
+    ),
   );
   getIt.registerSingleton<TaskRepository>(
     TaskRepositoryImpl(getIt<ApiService>()),
