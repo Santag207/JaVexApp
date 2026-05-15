@@ -1,9 +1,6 @@
 import 'package:equatable/equatable.dart';
 
 /// Eventos del AuthBloc
-///
-/// Estos eventos representan las acciones que el usuario puede desencadenar
-/// relacionadas con la autenticación
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
 
@@ -11,26 +8,38 @@ abstract class AuthEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Evento: Solicitar login
+/// Login con email + contraseña.
 class LoginRequested extends AuthEvent {
   final String email;
   final String password;
 
-  const LoginRequested({
-    required this.email,
-    required this.password,
-  });
+  const LoginRequested({required this.email, required this.password});
 
   @override
   List<Object?> get props => [email, password];
 }
 
-/// Evento: Solicitar logout
+/// Cerrar sesión.
 class LogoutRequested extends AuthEvent {
   const LogoutRequested();
 }
 
-/// Evento: Verificar si hay sesión activa
+/// Verificar estado de sesión al abrir la app (lo dispara el AuthGate).
 class AuthCheckRequested extends AuthEvent {
   const AuthCheckRequested();
+}
+
+/// Disparar el prompt biométrico para iniciar sesión.
+class BiometricLoginRequested extends AuthEvent {
+  const BiometricLoginRequested();
+}
+
+/// Activar la biometría tras un login exitoso por email/password.
+class BiometricEnableRequested extends AuthEvent {
+  const BiometricEnableRequested();
+}
+
+/// Desactivar la biometría (ej. desde Perfil).
+class BiometricDisableRequested extends AuthEvent {
+  const BiometricDisableRequested();
 }
