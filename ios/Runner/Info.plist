@@ -60,5 +60,9 @@
         <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
+
+    <!-- Autenticación biométrica con Face ID -->
+    <key>NSFaceIDUsageDescription</key>
+    <string>Usamos Face ID para iniciar sesión de forma segura en la app del Semillero XAE.</string>
 </dict>
 </plist>
