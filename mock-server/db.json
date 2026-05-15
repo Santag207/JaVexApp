@@ -22,6 +22,21 @@
         "Redes Sociales": 1,
         "Junta": 0
       }
+    },
+    {
+      "id": 2,
+      "email": "rozojuan104@gmail.com",
+      "password": "Juan123",
+      "nombre": "Juan",
+      "apellidos": "Rozo",
+      "fechaUnion": "26/04/2026",
+      "rango": "Miembro",
+      "tareasCompletadas": 0,
+      "tareasCreadas": 0,
+      "horasTrabajadas": 0,
+      "subsistemas": [],
+      "liderSubsistema": "",
+      "tareasCompletadasPorSubsistema": {}
     }
   ],
   "tasks": [
