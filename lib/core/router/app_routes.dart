@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/auth/auth_gate.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/menu/menu_screen.dart';
 import '../../features/home/home_screen.dart';
@@ -8,27 +9,24 @@ import '../../features/pending/pending_screen.dart';
 import '../../features/inventory/inventory_screen.dart';
 
 class AppRouter {
-  static GoRouter createRouter({
-    required bool initiallyAuthenticated,
-  }) {
+  static GoRouter createRouter() {
     return GoRouter(
-      initialLocation: initiallyAuthenticated ? '/menu' : '/login',
-
-      redirect: (BuildContext context, GoRouterState state) {
-        final isLoginRoute = state.uri.path == '/login';
-
-        if (!initiallyAuthenticated && !isLoginRoute) {
-          return '/login';
-        }
-
-        if (initiallyAuthenticated && isLoginRoute) {
-          return '/menu';
-        }
-
-        return null;
-      },
-
+      initialLocation: '/',
       routes: <RouteBase>[
+        // AuthGate: pantalla raíz que decide login vs biometría vs menú.
+        GoRoute(
+          name: 'authGate',
+          path: '/',
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const AuthGate(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        ),
+
         GoRoute(
           name: 'login',
           path: '/login',
