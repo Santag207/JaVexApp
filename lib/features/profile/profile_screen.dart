@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../add_hours/add_hours_screen.dart';
+import '../auth/bloc/auth_bloc.dart';
+import '../auth/bloc/auth_event.dart';
+import '../auth/bloc/auth_state.dart';
+import '../../domain/entities/user.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -9,41 +15,32 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final Map<String, dynamic> _userData = {};
-  final List<String> _allSubsistemas = [];
-  final bool _isLoading = false;
-  bool isActive = false;
-
-  void _showEditModal(BuildContext context) {
-    TextEditingController nameController =
-        TextEditingController(text: _userData['nombre']);
-    TextEditingController lastNameController =
-        TextEditingController(text: _userData['apellidos']);
-    List<String> selectedSubsistemas =
-        List<String>.from(_userData['subsistemas'] ?? []);
+  void _showEditModal(BuildContext context, User user) {
+    final nameController = TextEditingController(text: user.nombre);
+    final lastNameController = TextEditingController(text: user.apellidos);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.black,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (BuildContext context) {
+      builder: (BuildContext ctx) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (ctx, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
                 top: 20,
                 left: 20,
                 right: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Editar Perfil',
                     style: TextStyle(
                       fontSize: 24,
@@ -51,11 +48,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   TextField(
                     controller: nameController,
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
                       labelText: 'Nombre',
                       labelStyle: TextStyle(color: Colors.white),
                       enabledBorder: OutlineInputBorder(
@@ -66,11 +63,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   TextField(
                     controller: lastNameController,
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
                       labelText: 'Apellidos',
                       labelStyle: TextStyle(color: Colors.white),
                       enabledBorder: OutlineInputBorder(
@@ -81,52 +78,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    'Subsistemas:',
-                    style: TextStyle(fontSize: 16, color: Colors.white),
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _allSubsistemas.map((subsistema) {
-                      final isSelected =
-                          selectedSubsistemas.contains(subsistema);
-                      return FilterChip(
-                        label: Text(
-                          subsistema,
-                          style: TextStyle(
-                            color: isSelected ? Colors.black : Colors.white,
-                          ),
-                        ),
-                        selected: isSelected,
-                        selectedColor: Colors.red,
-                        backgroundColor: Colors.grey[800],
-                        onSelected: (bool selected) {
-                          setModalState(() {
-                            if (selected) {
-                              selectedSubsistemas.add(subsistema);
-                            } else {
-                              selectedSubsistemas.remove(subsistema);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+                    onPressed: () => Navigator.pop(ctx),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: Center(
+                    child: const Center(
                       child: Text(
                         'Guardar',
                         style: TextStyle(
@@ -148,294 +110,260 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.red)),
-      );
-    }
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          context.go('/');
+        }
+      },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, state) {
+          final user = state is AuthAuthenticated ? state.user : null;
 
-    final Map<String, dynamic> tareasCompletadasPorSubsistema =
-        Map<String, dynamic>.from(
-            _userData['tareasCompletadasPorSubsistema'] ?? {});
+          return Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(
+              backgroundColor: Colors.black,
+              elevation: 0,
+              title: const Padding(
+                padding: EdgeInsets.only(top: 30.0),
+                child: Text(
+                  'Perfil',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              centerTitle: true,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 20.0, right: 8.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.white),
+                    tooltip: 'Cerrar sesión',
+                    onPressed: () {
+                      context.read<AuthBloc>().add(const LogoutRequested());
+                    },
+                  ),
+                ),
+              ],
+            ),
+            floatingActionButton: user == null
+                ? null
+                : FloatingActionButton(
+                    backgroundColor: Colors.white,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const AddHoursScreen()),
+                      );
+                    },
+                    child: const Icon(Icons.add, color: Colors.black),
+                  ),
+            body: user == null
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.red))
+                : SingleChildScrollView(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const SizedBox(height: 10),
+                              // Foto de perfil
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  width: 250,
+                                  height: 250,
+                                  color: Colors.grey[800],
+                                  child: Image.asset(
+                                    'assets/profile_picture.jpg',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              // Nombre y apellidos
+                              Column(
+                                children: [
+                                  Text(
+                                    user.nombre,
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    user.apellidos,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              // Información adicional + botón editar
+                              Stack(
+                                children: [
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          'Fecha de unión: ${user.fechaUnion}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Rango: ${user.rango}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        if (user.subsistemas.isNotEmpty)
+                                          Text(
+                                            'Subsistemas: ${user.subsistemas.join(', ')}',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.white,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        if (user.liderSubsistema.isNotEmpty)
+                                          Text(
+                                            'Líder del subsistema de ${user.liderSubsistema}',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(left: 30),
+                                      child: IconButton(
+                                        onPressed: () =>
+                                            _showEditModal(context, user),
+                                        icon: const Icon(Icons.edit,
+                                            color: Colors.white),
+                                        iconSize: 24,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Divider(color: Colors.white, thickness: 1),
+                              ),
+                              // Estadísticas
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _statColumn(
+                                      user.tareasCompletadas.toString(),
+                                      'Tareas\nCompletadas'),
+                                  _statColumn(user.tareasCreadas.toString(),
+                                      'Tareas\nCreadas'),
+                                  _statColumn(
+                                      user.horasTrabajadas.toString(), 'Horas'),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              const Divider(color: Colors.white, thickness: 1),
+                              const Text(
+                                'Tareas completadas por subsistema:',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              if (user.tareasCompletadasPorSubsistema.isNotEmpty)
+                                GridView.count(
+                                  shrinkWrap: true,
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                  physics:
+                                      const NeverScrollableScrollPhysics(),
+                                  childAspectRatio: 2.5,
+                                  children: user.tareasCompletadasPorSubsistema
+                                      .entries
+                                      .map((e) => _buildSubsystemCard(
+                                          e.key,
+                                          '${e.value} tareas',
+                                          user))
+                                      .toList(),
+                                ),
+                              const SizedBox(height: 20),
+                            ],
+                          ),
+                        ),
+                ),
+          );
+        },
+      ),
+    );
+  }
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        title: Padding(
-          padding: EdgeInsets.only(top: 30.0),
-          child: Text(
-            'Perfil',
-            style: TextStyle(
-              fontSize: 28,
+  Widget _statColumn(String value, String label) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
             textAlign: TextAlign.center,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: 10),
-                  Container(
-                    margin: EdgeInsets.only(bottom: 10),
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: isActive ? Colors.green : Colors.grey[400],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      width: 250,
-                      height: 250,
-                      color: Colors.grey[800],
-                      child: Image.asset(
-                        'assets/profile_picture.jpg',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Column(
-                    children: [
-                      Text(
-                        _userData['nombre'] ?? 'Nombre desconocido',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        _userData['apellidos'] ?? 'Apellidos desconocidos',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10),
-                  Stack(
-                    children: [
-                      Align(
-                        alignment: Alignment.center,
-                        child: Column(
-                          children: [
-                            Text(
-                              'Fecha de unión: ${_userData['fechaUnion'] ?? 'N/A'}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              'Rango: ${_userData['rango'] ?? 'N/A'}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red,
-                              ),
-                            ),
-                            SizedBox(height: 10),
-                            if (_userData['subsistemas'] != null &&
-                                (_userData['subsistemas'] as List).isNotEmpty)
-                              Text(
-                                'Subsistemas: ${(_userData['subsistemas'] as List).join(', ')}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            if (_userData['liderSubsistema'] != null)
-                              Text(
-                                'Líder del subsistema de ${_userData['liderSubsistema']}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: EdgeInsets.only(left: 30),
-                          child: IconButton(
-                            onPressed: () => _showEditModal(context),
-                            icon: Icon(Icons.edit, color: Colors.white),
-                            iconSize: 24,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Divider(color: Colors.white, thickness: 1),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Text(
-                              _userData['tareasCompletadas']?.toString() ?? '0',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Tareas\nCompletadas',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Text(
-                              _userData['tareasCreadas']?.toString() ?? '0',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Tareas\nCreadas',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Text(
-                              _userData['horasTrabajadas']?.toString() ?? '0',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Horas',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10),
-                  Divider(color: Colors.white, thickness: 1),
-                  Text(
-                    'Tareas completadas por subsistema:',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  GridView.count(
-                    shrinkWrap: true,
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    physics: NeverScrollableScrollPhysics(),
-                    childAspectRatio: 2.5,
-                    children: _allSubsistemas.map((subsistema) {
-                      final count =
-                          tareasCompletadasPorSubsistema[subsistema] ?? 0;
-                      return _buildSubsystemCard(subsistema, '$count tareas');
-                    }).toList(),
-                  ),
-                  SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: FloatingActionButton(
-              backgroundColor: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const AddHoursScreen()),
-                );
-              },
-              child: Icon(Icons.add, color: Colors.black),
-            ),
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSubsystemCard(String title, String count) {
+  Widget _buildSubsystemCard(String title, String count, User user) {
     Color backgroundColor = Colors.grey[800]!;
-    if (_userData['subsistemas'] != null &&
-        (_userData['subsistemas'] as List).contains(title)) {
+    if (user.subsistemas.contains(title)) {
       backgroundColor =
-          _userData['liderSubsistema'] == title ? Colors.green : Colors.red;
+          user.liderSubsistema == title ? Colors.green : Colors.red;
     }
 
-    Color countTextColor =
-        (backgroundColor == Colors.red || backgroundColor == Colors.green)
-            ? Colors.black
-            : Colors.grey;
-
-    FontWeight countFontWeight =
-        (backgroundColor == Colors.red || backgroundColor == Colors.green)
-            ? FontWeight.bold
-            : FontWeight.normal;
+    final bool highlighted =
+        backgroundColor == Colors.red || backgroundColor == Colors.green;
 
     return SizedBox(
       height: 60,
       child: Container(
-        padding: EdgeInsets.all(6),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(12),
@@ -445,19 +373,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               count,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: countFontWeight,
-                color: countTextColor,
+                fontWeight:
+                    highlighted ? FontWeight.bold : FontWeight.normal,
+                color: highlighted ? Colors.black : Colors.grey,
               ),
             ),
           ],
