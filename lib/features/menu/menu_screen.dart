@@ -60,10 +60,10 @@ class _MenuScreenState extends State<MenuScreen> {
             });
           },
           items: [
-            _buildAnimatedItem(Icons.home_outlined, 'Inicio', 0),
-            _buildAnimatedItem(Icons.list_alt_outlined, 'Pendientes', 1),
-            _buildAnimatedItem(Icons.widgets_outlined, 'Inventario', 2),
-            _buildAnimatedItem(Icons.person_outline, 'Perfil', 3),
+            _buildAnimatedItem(Icons.home_rounded, 'Inicio', 0),
+            _buildAnimatedItem(Icons.task_alt_rounded, 'Pendientes', 1),
+            _buildAnimatedItem(Icons.inventory_2_rounded, 'Inventario', 2),
+            _buildAnimatedItem(Icons.person_rounded, 'Perfil', 3),
           ],
         ),
       ),
@@ -82,17 +82,11 @@ class _MenuScreenState extends State<MenuScreen> {
           return Transform.scale(
             scale: scale,
             child: Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: selected
                   ? BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.glowCyan(0.4),
-                          blurRadius: 12,
-                          spreadRadius: 0,
-                        ),
-                      ],
+                      color: AppColors.glowCyan(0.15),
+                      borderRadius: BorderRadius.circular(16),
                     )
                   : null,
               child: Icon(
