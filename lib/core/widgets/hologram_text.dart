@@ -12,11 +12,13 @@ class HologramText extends StatelessWidget {
     super.key,
     this.size = 16,
     this.color = AppColors.primaryAccent,
+    this.textAlign = TextAlign.center,
   });
 
   final String text;
   final double size;
   final Color color;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +26,7 @@ class HologramText extends StatelessWidget {
 
     final content = Text(
       text,
+      textAlign: textAlign,
       style: AppTheme.arcade(size: size, color: color).copyWith(
         shadows: [
           Shadow(color: glow, blurRadius: 12),
