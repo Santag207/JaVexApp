@@ -266,6 +266,12 @@ class _PendingScreenState extends State<PendingScreen> {
                                     'Fecha límite: ${_formatDate(tarea['fecha'])}',
                                     style: textTheme.labelMedium,
                                   ),
+                                  const SizedBox(height: 8),
+                                  _barraAvance(
+                                    avance: _calcularAvance(tarea['fecha']),
+                                    color: _getUrgenciaColor(tarea['urgencia']),
+                                    textTheme: textTheme,
+                                  ),
                                 ],
                               ),
                             ),
@@ -926,6 +932,41 @@ class _PendingScreenState extends State<PendingScreen> {
   String _formatDate(DateTime? date) {
     if (date == null) return '';
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  /// Avance visual derivado de la cercanía a la fecha límite (no es progreso
+  /// real de la tarea). Se llena a medida que se acerca el plazo dentro de una
+  /// ventana de ~14 días; una tarea vencida queda al 100%.
+  double _calcularAvance(DateTime? fechaLimite) {
+    if (fechaLimite == null) return 0;
+    const ventanaDias = 14;
+    final diasRestantes = fechaLimite.difference(DateTime.now()).inDays;
+    final avance = 1 - (diasRestantes / ventanaDias);
+    return avance.clamp(0.0, 1.0);
+  }
+
+  Widget _barraAvance({
+    required double avance,
+    required Color color,
+    required TextTheme textTheme,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: avance,
+              minHeight: 4,
+              backgroundColor: AppColors.border,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text('${(avance * 100).round()}%', style: textTheme.labelSmall),
+      ],
+    );
   }
 
   // Obtener peso para evaluar urgencia
