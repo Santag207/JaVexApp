@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/widgets.dart';
 import '../../domain/entities/member.dart';
@@ -54,27 +55,7 @@ class _HomeView extends StatelessWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        'Bienvenido de vuelta',
-                        style: textTheme.displayMedium,
-                        textAlign: TextAlign.center,
-                      ).fadeInUp(),
-                      const SizedBox(height: 24),
-                      Center(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.glowCyan(0.25),
-                                blurRadius: 30,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Image.asset('assets/logo.png', height: 180),
-                        ),
-                      ).fadeInUp(delay: const Duration(milliseconds: 120)),
+                      _HomeHeader().fadeInUp(),
                       const SizedBox(height: 24),
                       AppCard(
                         glow: true,
@@ -185,6 +166,70 @@ class _HomeView extends StatelessWidget {
           title: Text(members[index].nombre, style: textTheme.bodyMedium),
         );
       },
+    );
+  }
+}
+
+/// Encabezado compacto del Home: logo pequeño (glow blanco) + título holograma
+/// "Hello here!" y, a la derecha, el botón de acceso NFC al laboratorio.
+class _HomeHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.glowWhite(0.5),
+                blurRadius: 20,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Image.asset('assets/logo.png', height: 52, width: 52),
+        ),
+        const SizedBox(width: 14),
+        const Expanded(
+          child: HologramText('Hello here!', size: 16),
+        ),
+        const SizedBox(width: 12),
+        _NfcButton(),
+      ],
+    );
+  }
+}
+
+/// Botón compacto de acceso NFC al laboratorio físico.
+class _NfcButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Acceso laboratorio (NFC)',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.push('/nfc'),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.glowCyan(0.25),
+                blurRadius: 16,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.contactless,
+            color: AppColors.primaryAccent,
+            size: 28,
+          ),
+        ),
+      ),
     );
   }
 }
