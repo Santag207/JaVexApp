@@ -25,4 +25,7 @@ class AppColors {
 
   static Color glowCyan(double opacity) =>
       primaryAccent.withValues(alpha: opacity.clamp(0.0, 1.0));
+
+  static Color glowWhite(double opacity) =>
+      Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0));
 }

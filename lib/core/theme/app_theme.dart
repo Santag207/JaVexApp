@@ -46,15 +46,31 @@ class AppTheme {
         letterSpacing: letterSpacing,
       );
 
+  /// Fuente arcade (pixel-art) para títulos y encabezados. Press Start 2P es
+  /// monoespaciada y blocosa, por eso se usa con tamaños pequeños y sin
+  /// letterSpacing extra. No usar en texto de cuerpo (ilegible).
+  static TextStyle arcade({
+    required double size,
+    Color color = AppColors.textPrimary,
+  }) =>
+      GoogleFonts.pressStart2p(
+        fontSize: size,
+        color: color,
+      );
+
   static ThemeData get darkTheme {
     final base = ThemeData.dark(useMaterial3: true);
 
     final textTheme = TextTheme(
+      // displayLarge se queda en Orbitron: se usa para números grandes
+      // (ej. contador de tareas), donde un pixel-font sería ilegible.
       displayLarge: _orbitron(size: 32, letterSpacing: 2),
-      displayMedium: _orbitron(size: 24),
-      displaySmall: _orbitron(size: 20),
-      headlineMedium: _orbitron(size: 18),
-      titleLarge: _orbitron(size: 16, weight: FontWeight.w700, letterSpacing: 1.2),
+      // Títulos y encabezados en fuente arcade (tamaños reducidos porque
+      // Press Start 2P se ve ~40% más grande que Orbitron).
+      displayMedium: arcade(size: 16),
+      displaySmall: arcade(size: 13),
+      headlineMedium: arcade(size: 12),
+      titleLarge: arcade(size: 11),
       bodyLarge: _montserrat(size: 16),
       bodyMedium: _montserrat(size: 14),
       bodySmall: _montserrat(size: 12, color: AppColors.textSecondary),
@@ -88,7 +104,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
-        titleTextStyle: _orbitron(size: 20, letterSpacing: 2),
+        titleTextStyle: arcade(size: 12),
         iconTheme: const IconThemeData(color: AppColors.primaryAccent),
       ),
       cardTheme: CardThemeData(
