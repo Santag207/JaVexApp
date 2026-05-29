@@ -5,7 +5,7 @@ description: XAEApp - Xavierian Aerospace Engineering.
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.19.0 <3.0.0"
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -27,6 +27,9 @@ dependencies:
   # Autenticación biométrica y almacenamiento seguro
   local_auth: ^2.2.0
   flutter_secure_storage: ^9.0.0
+
+  # Backend - Supabase
+  supabase_flutter: ^2.8.0
 
   # Tipografías y animaciones del sistema de diseño
   google_fonts: ^6.1.0

@@ -1,6 +1,6 @@
 import 'package:get_it/get_it.dart';
 import '../../data/api_service.dart';
-import '../../data/api/dio_api_service.dart';
+import '../../data/api/supabase_api_service.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/task_repository_impl.dart';
 import '../../data/repositories/user_repository_impl.dart';
@@ -24,8 +24,8 @@ final getIt = GetIt.instance;
 void setupServiceLocator() {
   // ==================== SINGLETONS (Servicios Globales) ====================
 
-  // API Service
-  getIt.registerSingleton<ApiService>(DioApiService());
+  // API Service (Supabase como fuente de datos)
+  getIt.registerSingleton<ApiService>(SupabaseApiService());
 
   // Servicios de seguridad y biometría
   getIt.registerSingleton<SecureStorageService>(SecureStorageService());

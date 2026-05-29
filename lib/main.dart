@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/di/service_locator.dart';
 import 'core/router/app_routes.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/widgets.dart';
+import 'data/config.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Inicializa Supabase antes del service locator, porque SupabaseApiService
+  // usa Supabase.instance.client.
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
   setupServiceLocator();
   runApp(const MyApp());
 }
