@@ -61,7 +61,7 @@ class _AuthGateState extends State<AuthGate> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.glowCyan(0.3),
+                        color: AppColors.glowWhite(0.5),
                         blurRadius: 40,
                         spreadRadius: 4,
                       ),
