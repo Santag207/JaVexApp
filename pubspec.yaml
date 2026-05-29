@@ -1,5 +1,5 @@
-name: JaVexApp
-description: A new Flutter project.
+name: xae_app
+description: XAEApp - Xavierian Aerospace Engineering.
 
 # Version y otros metadatos del proyecto
 version: 1.0.0+1
@@ -28,13 +28,28 @@ dependencies:
   local_auth: ^2.2.0
   flutter_secure_storage: ^9.0.0
 
+  # Tipografías y animaciones del sistema de diseño
+  google_fonts: ^6.1.0
+  flutter_animate: ^4.5.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   table_calendar: ^3.0.6
-  
+
   # Testing
   mocktail: ^1.0.0
+
+  # Generador de iconos de launcher
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#0A0A0F"
+  adaptive_icon_foreground: "assets/logo.png"
 
 flutter:
   uses-material-design: true
