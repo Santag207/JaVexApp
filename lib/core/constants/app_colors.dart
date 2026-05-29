@@ -12,11 +12,17 @@ class AppColors {
   static const Color secondaryAccent = Color(0xFFFFAA00);
 
   // Texto
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFAAAAAA);
+  static const Color textPrimary = Color(0xFFE0E0E0);
+  static const Color textSecondary = Color(0xFF888888);
+
+  // Bordes
+  static const Color border = Color(0xFF333344);
 
   // Funcionales
-  static const Color error = Color(0xFFFF4444);
-  static const Color success = Color(0xFF4CAF50);
+  static const Color error = Color(0xFFFF3366);
+  static const Color success = Color(0xFF00FF88);
   static const Color warning = Color(0xFFFFAA00);
+
+  static Color glowCyan(double opacity) =>
+      primaryAccent.withValues(alpha: opacity.clamp(0.0, 1.0));
 }
