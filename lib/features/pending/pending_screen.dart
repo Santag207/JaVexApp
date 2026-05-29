@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/widgets/widgets.dart';
+import '../../domain/repositories/task_repository.dart';
+import '../auth/bloc/auth_bloc.dart';
+import '../auth/bloc/auth_state.dart';
 
 class PendingScreen extends StatefulWidget {
   const PendingScreen({Key? key}) : super(key: key);
@@ -10,10 +17,12 @@ class PendingScreen extends StatefulWidget {
 }
 
 class _PendingScreenState extends State<PendingScreen> {
-  // Placeholder data - empty lists and maps for placeholder data
+  final TaskRepository _taskRepository = GetIt.I<TaskRepository>();
+
   Map<String, List<Map<String, dynamic>>> tareasPorSubsistema = {};
   String? _nombreUsuario;
-  bool _isLoading = false;
+  String? _errorMessage;
+  bool _isLoading = true;
 
   String subsistemaSeleccionado = 'Logística';
   DateTime focusedDay = DateTime.now();
@@ -22,29 +31,81 @@ class _PendingScreenState extends State<PendingScreen> {
   @override
   void initState() {
     super.initState();
-    _initializePlaceholderData();
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      _nombreUsuario = '${authState.user.nombre} ${authState.user.apellidos}';
+    } else if (authState is AuthAuthenticatedAwaitingBiometricChoice) {
+      _nombreUsuario = '${authState.user.nombre} ${authState.user.apellidos}';
+    }
+    _loadTasks();
   }
 
-  void _initializePlaceholderData() {
-    // Initialize with empty placeholder data
+  Future<void> _loadTasks() async {
     setState(() {
-      tareasPorSubsistema = {
-        'Logística': [],
-        'Operaciones': [],
-        'Desarrollo': [],
-      };
-      _nombreUsuario = 'UsuarioActual';
-      subsistemaSeleccionado = 'Logística';
-      _isLoading = false;
+      _isLoading = true;
+      _errorMessage = null;
     });
+    try {
+      final tasks = await _taskRepository.getTasks();
+      final Map<String, List<Map<String, dynamic>>> grouped = {};
+      for (final t in tasks) {
+        final sub = t.subsistema.isEmpty ? 'Sin subsistema' : t.subsistema;
+        grouped.putIfAbsent(sub, () => []);
+        grouped[sub]!.add({
+          'id': t.id,
+          'titulo': t.titulo,
+          'descripcion': t.descripcion,
+          'urgencia': t.urgencia,
+          'fecha': DateTime.tryParse(t.fecha) ?? DateTime.now(),
+          'subsistema': sub,
+          'nombreCreador': t.nombreCreador,
+        });
+      }
+      if (!mounted) return;
+      setState(() {
+        tareasPorSubsistema = grouped;
+        if (!grouped.containsKey(subsistemaSeleccionado) && grouped.isNotEmpty) {
+          subsistemaSeleccionado = grouped.keys.first;
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     if (_isLoading) {
-      return Container(
-        color: Colors.black,
-        child: Center(child: CircularProgressIndicator(color: Colors.red)),
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage != null) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('// ${_errorMessage!}',
+                  style:
+                      textTheme.bodyMedium?.copyWith(color: AppColors.error),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              AppButton(
+                label: 'Reintentar',
+                onPressed: _loadTasks,
+                icon: Icons.refresh,
+                glow: true,
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -52,56 +113,54 @@ class _PendingScreenState extends State<PendingScreen> {
     final tareasSeleccionadas =
         tareasPorSubsistema[subsistemaSeleccionado] ?? [];
 
-    return Container(
-      color: Colors.black,
-      padding: EdgeInsets.only(top: 50.0, left: 16.0, right: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Título de la pantalla
-          Center(
-            child: Text(
-              'Lista de pendientes',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+    return SafeArea(
+      child: RefreshIndicator(
+        color: AppColors.primaryAccent,
+        onRefresh: _loadTasks,
+        child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                'LISTA DE PENDIENTES',
+                style: textTheme.displayMedium,
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          SizedBox(height: 20),
+            ).fadeInUp(),
+            const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   Text(
-                    'Subsistema: ',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    'SUBSISTEMA: ',
+                    style: textTheme.labelLarge,
                   ),
                   DropdownButton<String>(
                     value: subsistemaSeleccionado,
-                    dropdownColor: Colors.black,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.normal,
+                    dropdownColor: AppColors.cardBackground,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
-                    iconEnabledColor: Colors.red,
+                    iconEnabledColor: AppColors.primaryAccent,
+                    underline: Container(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
                     items: tareasPorSubsistema.keys.map((String subsistema) {
                       return DropdownMenuItem<String>(
                         value: subsistema,
                         child: Text(
                           subsistema,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.normal,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
                           ),
                         ),
                       );
@@ -116,14 +175,20 @@ class _PendingScreenState extends State<PendingScreen> {
                 ],
               ),
               PopupMenuButton<String>(
+                color: AppColors.cardBackground,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: const BorderSide(color: AppColors.border),
+                ),
                 icon: Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: AppColors.primaryAccent),
                   ),
-                  child: Icon(Icons.menu, color: Colors.black),
+                  child: const Icon(Icons.menu, color: AppColors.primaryAccent),
                 ),
                 onSelected: (String value) {
                   if (value == 'Agregar') {
@@ -134,65 +199,86 @@ class _PendingScreenState extends State<PendingScreen> {
                     _showNotionDialog();
                   }
                 },
-                itemBuilder: (context) => [
+                itemBuilder: (context) => const [
                   PopupMenuItem(
                     value: 'Agregar',
-                    child: Text('Agregar pendiente'),
+                    child: Text('Agregar pendiente',
+                        style: TextStyle(color: AppColors.textPrimary)),
                   ),
                   PopupMenuItem(
                     value: 'Completar',
-                    child: Text('Completar pendiente'),
+                    child: Text('Completar pendiente',
+                        style: TextStyle(color: AppColors.textPrimary)),
                   ),
                   PopupMenuItem(
                     value: 'Notion',
-                    child: Text('Abrir Notion'),
+                    child: Text('Abrir Notion',
+                        style: TextStyle(color: AppColors.textPrimary)),
                   ),
                 ],
               ),
             ],
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 12),
           // Mostrar tareas filtradas por subsistema
           Expanded(
-            child: ListView.builder(
-              itemCount: tareasSeleccionadas.length,
-              itemBuilder: (context, index) {
-                final tarea = tareasSeleccionadas[index];
-                return ListTile(
-                  leading: Icon(Icons.warning,
-                      color: _getUrgenciaColor(tarea['urgencia'])),
-                  title: Text(
-                    '${tarea['titulo']} (${tarea['urgencia']})',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.normal,
-                      color: Colors.white,
-                    ),
+            child: tareasSeleccionadas.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      const SizedBox(height: 60),
+                      Center(
+                        child: Text(
+                          '// Sin pendientes en este subsistema',
+                          style: textTheme.labelMedium,
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: tareasSeleccionadas.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final tarea = tareasSeleccionadas[index];
+                      return AppCard(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        onTap: () => _mostrarDetallesPendiente(
+                            context, tarea, subsistemaSeleccionado),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded,
+                                color: _getUrgenciaColor(tarea['urgencia'])),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${tarea['titulo']} (${tarea['urgencia']})',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Fecha límite: ${_formatDate(tarea['fecha'])}',
+                                    style: textTheme.labelMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                  subtitle: Text(
-                    'Fecha límite: ${_formatDate(tarea['fecha'])}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  onTap: () => _mostrarDetallesPendiente(
-                      context, tarea, subsistemaSeleccionado),
-                );
-              },
-            ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 12),
           // Calendario del mes actual
-          Text(
-            'Calendario:',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+          Text('CALENDARIO', style: textTheme.titleLarge),
+          const SizedBox(height: 8),
           TableCalendar(
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
@@ -205,13 +291,19 @@ class _PendingScreenState extends State<PendingScreen> {
                 _mostrarTareasDelDia(context);
               });
             },
-            calendarStyle: CalendarStyle(
+            calendarStyle: const CalendarStyle(
               todayDecoration: BoxDecoration(
-                color: Colors.red,
+                color: AppColors.primaryAccent,
                 shape: BoxShape.circle,
               ),
-              defaultTextStyle: TextStyle(color: Colors.white),
-              weekendTextStyle: TextStyle(color: Colors.red),
+              todayTextStyle: TextStyle(color: AppColors.background),
+              selectedDecoration: BoxDecoration(
+                color: AppColors.secondaryAccent,
+                shape: BoxShape.circle,
+              ),
+              selectedTextStyle: TextStyle(color: AppColors.background),
+              defaultTextStyle: TextStyle(color: AppColors.textPrimary),
+              weekendTextStyle: TextStyle(color: AppColors.secondaryAccent),
               outsideDaysVisible: false,
             ),
             eventLoader: (day) {
@@ -246,18 +338,27 @@ class _PendingScreenState extends State<PendingScreen> {
                 return null;
               },
             ),
-            headerStyle: HeaderStyle(
-              titleTextStyle: TextStyle(color: Colors.white, fontSize: 16),
+            headerStyle: const HeaderStyle(
+              titleTextStyle: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+              ),
               formatButtonVisible: false,
-              leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
-              rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
+              leftChevronIcon:
+                  Icon(Icons.chevron_left, color: AppColors.primaryAccent),
+              rightChevronIcon:
+                  Icon(Icons.chevron_right, color: AppColors.primaryAccent),
             ),
-            daysOfWeekStyle: DaysOfWeekStyle(
-              weekdayStyle: TextStyle(color: Colors.white),
-              weekendStyle: TextStyle(color: Colors.red),
+            daysOfWeekStyle: const DaysOfWeekStyle(
+              weekdayStyle: TextStyle(color: AppColors.textSecondary),
+              weekendStyle: TextStyle(color: AppColors.secondaryAccent),
             ),
           ),
-        ],
+          ],
+        ),
+        ),
       ),
     );
   }
@@ -270,8 +371,8 @@ class _PendingScreenState extends State<PendingScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.black,
-      shape: RoundedRectangleBorder(
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
       ),
       isScrollControlled: true,
@@ -290,25 +391,26 @@ class _PendingScreenState extends State<PendingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Agregar Pendiente',
+                    'AGREGAR PENDIENTE',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryAccent,
+                      letterSpacing: 1.5,
                     ),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   // Selección de Subsistema
                   DropdownButton<String>(
                     value: subsistemaSeleccionadoAgregar,
-                    dropdownColor: Colors.black,
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                    iconEnabledColor: Colors.red,
+                    dropdownColor: AppColors.cardBackground,
+                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                    iconEnabledColor: AppColors.primaryAccent,
                     items: tareasPorSubsistema.keys.map((String subsistema) {
                       return DropdownMenuItem<String>(
                         value: subsistema,
                         child: Text(subsistema,
-                            style: TextStyle(color: Colors.white)),
+                            style: const TextStyle(color: AppColors.textPrimary)),
                       );
                     }).toList(),
                     onChanged: (String? nuevoValor) {
@@ -317,48 +419,33 @@ class _PendingScreenState extends State<PendingScreen> {
                       });
                     },
                   ),
-                  SizedBox(height: 16),
-                  // Campo de texto: Título
-                  TextField(
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                    decoration: InputDecoration(
-                      labelText: 'Título',
-                      labelStyle: TextStyle(color: Colors.white, fontSize: 16),
-                      enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.grey)),
-                      focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.red)),
-                    ),
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    label: 'Título',
                     onChanged: (value) => titulo = value,
                   ),
-                  SizedBox(height: 16),
-                  // Campo de texto: Descripción
-                  TextField(
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    label: 'Descripción',
                     maxLines: 3,
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                    decoration: InputDecoration(
-                      labelText: 'Descripción',
-                      labelStyle: TextStyle(color: Colors.white, fontSize: 16),
-                      enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.grey)),
-                      focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.red)),
-                    ),
                     onChanged: (value) => descripcion = value,
                   ),
-                  SizedBox(height: 16),
-                  // Nombre del creador (placeholder data)
+                  const SizedBox(height: 16),
                   Text(
-                    'Nombre del creador: ${_nombreUsuario ?? "Desconocido"}',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                    'CREADOR: ${(_nombreUsuario ?? "Desconocido").toUpperCase()}',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      letterSpacing: 1.2,
+                    ),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   // Selección de Prioridad
                   DropdownButton<String>(
                     value: urgencia,
-                    dropdownColor: Colors.black,
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                    iconEnabledColor: Colors.red,
+                    dropdownColor: AppColors.cardBackground,
+                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                    iconEnabledColor: AppColors.primaryAccent,
                     items: ['!', '!!', '!!!'].map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
@@ -383,14 +470,14 @@ class _PendingScreenState extends State<PendingScreen> {
                         builder: (BuildContext context, Widget? child) {
                           return Theme(
                             data: ThemeData.dark().copyWith(
-                              colorScheme: ColorScheme.dark(
-                                primary: Colors.red,
-                                onPrimary: Colors.white,
-                                surface: Colors.black,
-                                onSurface: Colors.white,
+                              colorScheme: const ColorScheme.dark(
+                                primary: AppColors.primaryAccent,
+                                onPrimary: AppColors.background,
+                                surface: AppColors.cardBackground,
+                                onSurface: AppColors.textPrimary,
                               ),
-                              dialogTheme: DialogThemeData(
-                                backgroundColor: Colors.black,
+                              dialogTheme: const DialogThemeData(
+                                backgroundColor: AppColors.cardBackground,
                               ),
                             ),
                             child: child!,
@@ -407,27 +494,41 @@ class _PendingScreenState extends State<PendingScreen> {
                       fechaSeleccionada == null
                           ? 'Seleccionar Fecha'
                           : 'Fecha: ${_formatDate(fechaSeleccionada)}',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      style: const TextStyle(
+                          color: AppColors.primaryAccent, fontSize: 14),
                     ),
                   ),
-                  SizedBox(height: 16),
-                  // Botón Agregar
-                  ElevatedButton(
+                  const SizedBox(height: 16),
+                  AppButton(
+                    label: 'Agregar',
+                    fullWidth: true,
+                    glow: true,
                     onPressed: () async {
                       if (titulo != null &&
                           descripcion != null &&
                           urgencia != null &&
                           fechaSeleccionada != null) {
                         try {
-                          // Create task with placeholder data (no API call)
-                          final newTask = {
-                            'id': DateTime.now().millisecondsSinceEpoch,
+                          final createdRaw =
+                              await _taskRepository.createTask({
                             'titulo': titulo!,
                             'descripcion': descripcion!,
                             'urgencia': urgencia!,
-                            'fecha': fechaSeleccionada!,
+                            'fecha':
+                                '${fechaSeleccionada!.year.toString().padLeft(4, '0')}-${fechaSeleccionada!.month.toString().padLeft(2, '0')}-${fechaSeleccionada!.day.toString().padLeft(2, '0')}',
                             'subsistema': subsistemaSeleccionadoAgregar,
                             'nombreCreador': _nombreUsuario ?? 'Desconocido',
+                          });
+                          final newTask = {
+                            'id': createdRaw.id,
+                            'titulo': createdRaw.titulo,
+                            'descripcion': createdRaw.descripcion,
+                            'urgencia': createdRaw.urgencia,
+                            'fecha':
+                                DateTime.tryParse(createdRaw.fecha) ??
+                                    fechaSeleccionada!,
+                            'subsistema': subsistemaSeleccionadoAgregar,
+                            'nombreCreador': createdRaw.nombreCreador,
                           };
 
                           setState(() {
@@ -436,39 +537,26 @@ class _PendingScreenState extends State<PendingScreen> {
                             tareasPorSubsistema[subsistemaSeleccionadoAgregar]!
                                 .add(newTask);
                           });
+                          if (!mounted) return;
                           Navigator.pop(context);
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Error al crear la tarea'),
-                              backgroundColor: Colors.red,
+                              content: Text('Error al crear la tarea: $e'),
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                          const SnackBar(
                             content:
                                 Text('Por favor completa todos los campos'),
-                            backgroundColor: Colors.red,
+                            backgroundColor: AppColors.error,
                           ),
                         );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: Text(
-                        'Agregar',
-                        style: TextStyle(color: Colors.white),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -485,8 +573,8 @@ class _PendingScreenState extends State<PendingScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.black,
-      shape: RoundedRectangleBorder(
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
       ),
       isScrollControlled: true,
@@ -506,38 +594,40 @@ class _PendingScreenState extends State<PendingScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Completar Tareas',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Subsistemas:',
+                  const Text(
+                    'COMPLETAR TAREAS',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryAccent,
+                      letterSpacing: 1.5,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'SUBSISTEMAS',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   DropdownButton<String>(
                     value: subsistemaSeleccionadoCompletar,
-                    dropdownColor: Colors.black,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
+                    dropdownColor: AppColors.cardBackground,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
                     ),
-                    iconEnabledColor: Colors.red,
+                    iconEnabledColor: AppColors.primaryAccent,
                     items: tareasPorSubsistema.keys.map((String subsistema) {
                       return DropdownMenuItem<String>(
                         value: subsistema,
                         child: Text(
                           subsistema,
-                          style: TextStyle(color: Colors.white),
+                          style: const TextStyle(color: AppColors.textPrimary),
                         ),
                       );
                     }).toList(),
@@ -547,11 +637,12 @@ class _PendingScreenState extends State<PendingScreen> {
                       });
                     },
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   if (pendientes.isEmpty)
-                    Text(
-                      'No hay pendientes para este subsistema.',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    const Text(
+                      '// Sin pendientes para este subsistema.',
+                      style: TextStyle(
+                          color: AppColors.textSecondary, fontSize: 13),
                     )
                   else
                     ...pendientes.map((tarea) {
@@ -563,42 +654,35 @@ class _PendingScreenState extends State<PendingScreen> {
                             Expanded(
                               child: Text(
                                 tarea['titulo'],
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 14,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            SizedBox(width: 8),
-                            ElevatedButton(
+                            const SizedBox(width: 8),
+                            AppButton(
+                              label: 'Completar',
+                              variant: AppButtonVariant.primary,
                               onPressed: () async {
                                 try {
-                                  // Remove task from placeholder data (no API call)
+                                  await _taskRepository
+                                      .deleteTask(tarea['id'] as int);
                                   setState(() {
                                     pendientes.remove(tarea);
                                   });
+                                  if (!mounted) return;
                                   Navigator.pop(context);
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content:
-                                          Text('Error al completar la tarea'),
-                                      backgroundColor: Colors.red,
+                                    const SnackBar(
+                                      content: Text('Error al completar la tarea'),
+                                      backgroundColor: AppColors.error,
                                     ),
                                   );
                                 }
                               },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: Text(
-                                'Completar',
-                                style: TextStyle(color: Colors.white),
-                              ),
                             ),
                           ],
                         ),
@@ -618,40 +702,31 @@ class _PendingScreenState extends State<PendingScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.black,
+          backgroundColor: AppColors.cardBackground,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: AppColors.border),
           ),
-          title: Text(
-            '¿Quieres abrir el Notion?',
+          title: const Text(
+            '¿Abrir Notion?',
             style: TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600),
           ),
           actions: [
-            ElevatedButton(
+            AppButton(
+              label: 'Sí',
               onPressed: () {
                 Navigator.of(context).pop();
                 _openNotion();
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text('Sí', style: TextStyle(color: Colors.white)),
+              glow: true,
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text('No', style: TextStyle(color: Colors.white)),
+            AppButton(
+              label: 'No',
+              variant: AppButtonVariant.danger,
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ],
         );
@@ -671,25 +746,25 @@ class _PendingScreenState extends State<PendingScreen> {
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Abriendo el calendario de pendientes en Notion...'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('No se pudo abrir el enlace. Verifica tu conexión.'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
     } catch (e) {
       print('Error al intentar abrir el enlace: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Ocurrió un error al abrir el enlace.'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -705,8 +780,8 @@ class _PendingScreenState extends State<PendingScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.black,
-      shape: RoundedRectangleBorder(
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
       ),
       builder: (context) {
@@ -716,17 +791,18 @@ class _PendingScreenState extends State<PendingScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Pendientes para el ${_formatDate(selectedDay)}',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red),
+                'PENDIENTES PARA EL ${_formatDate(selectedDay)}',
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryAccent,
+                    letterSpacing: 1.5),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               if (tareasDelDia.isEmpty)
-                Text(
-                  'No hay pendientes para este día.',
-                  style: TextStyle(color: Colors.white),
+                const Text(
+                  '// Sin pendientes para este día.',
+                  style: TextStyle(color: AppColors.textSecondary),
                 )
               else
                 ...tareasDelDia.map((tarea) {
@@ -735,15 +811,15 @@ class _PendingScreenState extends State<PendingScreen> {
                       .key;
 
                   return ListTile(
-                    leading: Icon(Icons.warning,
+                    leading: Icon(Icons.warning_amber_rounded,
                         color: _getUrgenciaColor(tarea['urgencia'])),
                     title: Text(
                       '${tarea['titulo']} - ($subsistema)',
-                      style: TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.textPrimary),
                     ),
                     subtitle: Text(
                       'Urgencia: ${tarea['urgencia']}',
-                      style: TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.textSecondary),
                     ),
                     onTap: () {
                       Navigator.pop(context);
@@ -763,8 +839,8 @@ class _PendingScreenState extends State<PendingScreen> {
       BuildContext context, Map<String, dynamic> tarea, String subsistema) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.black,
-      shape: RoundedRectangleBorder(
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
       ),
       builder: (context) {
@@ -774,85 +850,31 @@ class _PendingScreenState extends State<PendingScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Detalles del Pendiente',
+              const Text(
+                'DETALLES DEL PENDIENTE',
                 style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryAccent,
+                  letterSpacing: 1.5,
                 ),
               ),
-              SizedBox(height: 16),
-              RichText(
-                text: TextSpan(
-                  text: 'Título: ',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                  children: [
-                    TextSpan(
-                      text: '${tarea['titulo']}',
-                      style: TextStyle(fontWeight: FontWeight.normal),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 8),
-              RichText(
-                text: TextSpan(
-                  text: 'Subsistema: ',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                  children: [
-                    TextSpan(
-                      text: '$subsistema',
-                      style: TextStyle(fontWeight: FontWeight.normal),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 8),
-              RichText(
-                text: TextSpan(
-                  text: 'Fecha límite: ',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                  children: [
-                    TextSpan(
-                      text: '${_formatDate(tarea['fecha'])}',
-                      style: TextStyle(fontWeight: FontWeight.normal),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 8),
-              RichText(
-                text: TextSpan(
-                  text: 'Creado por: ',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                  children: [
-                    TextSpan(
-                      text: '${tarea['nombreCreador'] ?? 'Anónimo'}',
-                      style: TextStyle(fontWeight: FontWeight.normal),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 8),
+              const SizedBox(height: 16),
+              _detailRow('Título', tarea['titulo'].toString()),
+              const SizedBox(height: 8),
+              _detailRow('Subsistema', subsistema),
+              const SizedBox(height: 8),
+              _detailRow('Fecha límite', _formatDate(tarea['fecha'])),
+              const SizedBox(height: 8),
+              _detailRow('Creado por', tarea['nombreCreador'] ?? 'Anónimo'),
+              const SizedBox(height: 8),
               Text(
                 'Prioridad: ${tarea['urgencia']}',
                 style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                   color: _getUrgenciaColor(tarea['urgencia']),
+                  letterSpacing: 1.2,
                 ),
               ),
             ],
@@ -862,17 +884,41 @@ class _PendingScreenState extends State<PendingScreen> {
     );
   }
 
+  Widget _detailRow(String label, String value) {
+    return RichText(
+      text: TextSpan(
+        text: '${label.toUpperCase()}: ',
+        style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textSecondary,
+            letterSpacing: 1.2),
+        children: [
+          TextSpan(
+            text: value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: AppColors.textPrimary,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Colores según la urgencia
   Color _getUrgenciaColor(String urgencia) {
     switch (urgencia) {
       case '!':
-        return Colors.green;
+        return AppColors.success;
       case '!!':
-        return Colors.yellow;
+        return AppColors.warning;
       case '!!!':
-        return Colors.red;
+        return AppColors.error;
       default:
-        return Colors.white;
+        return AppColors.textPrimary;
     }
   }
 

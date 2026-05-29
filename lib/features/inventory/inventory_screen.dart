@@ -1,220 +1,149 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/widgets/widgets.dart';
+import '../../domain/entities/item.dart';
 import '../qr_scanner/qr_scanner_screen.dart';
+import 'bloc/inventory_bloc.dart';
+import 'bloc/inventory_event.dart';
+import 'bloc/inventory_state.dart';
 
-class InventoryScreen extends StatefulWidget {
+class InventoryScreen extends StatelessWidget {
   const InventoryScreen({Key? key}) : super(key: key);
 
   @override
-  State<InventoryScreen> createState() => _InventoryScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider<InventoryBloc>(
+      create: (_) =>
+          GetIt.I<InventoryBloc>()..add(const LoadInventoryRequested()),
+      child: const _InventoryView(),
+    );
+  }
 }
 
-class _InventoryScreenState extends State<InventoryScreen> {
-  final List<Map<String, dynamic>> _scannedItems = [];
-  final List<Map<String, dynamic>> _registeredItems = [];
-  final bool _isLoading = false;
+class _InventoryView extends StatefulWidget {
+  const _InventoryView();
 
-  String searchQueryLista = '';
-  String searchQuery = '';
-  String? selectedIntegrante;
-  bool isViewingRegistered = false;
+  @override
+  State<_InventoryView> createState() => _InventoryViewState();
+}
+
+class _InventoryViewState extends State<_InventoryView> {
+  String _searchScanned = '';
+  String _searchRegistered = '';
+  bool _isViewingRegistered = false;
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.red)),
-      );
-    }
-
-    List<Map<String, dynamic>> itemsToShow = isViewingRegistered
-        ? _registeredItems
-            .where((item) => item['nombre']
-                .toString()
-                .toLowerCase()
-                .contains(searchQuery.toLowerCase()))
-            .toList()
-        : _scannedItems
-            .where((item) => item['nombreItem']
-                .toString()
-                .toLowerCase()
-                .contains(searchQueryLista.toLowerCase()))
-            .toList();
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Padding(
-        padding: EdgeInsets.only(top: 50.0, left: 16.0, right: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Text(
-                'Inventario',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        !isViewingRegistered ? Colors.red : Colors.grey[800],
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      isViewingRegistered = false;
-                    });
-                  },
-                  child: Text('Escaneado',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isViewingRegistered ? Colors.red : Colors.grey[800],
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      isViewingRegistered = true;
-                    });
-                  },
-                  child: Text('Registrado',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-            if (!isViewingRegistered)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: BlocBuilder<InventoryBloc, InventoryState>(
+          builder: (context, state) {
+            final loading =
+                state is InventoryLoading || state is InventoryInitial;
+            final error = state is InventoryError ? state.message : null;
+            final scanned =
+                state is InventoryLoaded ? state.scannedItems : <Item>[];
+            final registered = state is InventoryLoaded
+                ? state.registeredItems
+                : <RegisteredItem>[];
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'Filtrar por nombre:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  const SizedBox(height: 12),
+                  Text('INVENTARIO',
+                      style: textTheme.displayMedium,
+                      textAlign: TextAlign.center)
+                      .fadeInUp(),
+                  const SizedBox(height: 8),
+                  Text('// Catálogo de recursos',
+                      style: textTheme.labelMedium,
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppButton(
+                          label: 'Escaneado',
+                          variant: !_isViewingRegistered
+                              ? AppButtonVariant.primary
+                              : AppButtonVariant.ghost,
+                          glow: !_isViewingRegistered,
+                          fullWidth: true,
+                          onPressed: () =>
+                              setState(() => _isViewingRegistered = false),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: AppButton(
+                          label: 'Registrado',
+                          variant: _isViewingRegistered
+                              ? AppButtonVariant.primary
+                              : AppButtonVariant.ghost,
+                          glow: _isViewingRegistered,
+                          fullWidth: true,
+                          onPressed: () =>
+                              setState(() => _isViewingRegistered = true),
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 8),
-                  TextField(
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar artículo escaneado...',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                  const SizedBox(height: 20),
+                  AppTextField(
+                    label: 'Filtrar por nombre',
+                    hint: _isViewingRegistered
+                        ? 'Buscar artículo registrado...'
+                        : 'Buscar artículo escaneado...',
+                    prefixIcon: Icons.search,
                     onChanged: (value) {
                       setState(() {
-                        searchQueryLista = value;
+                        if (_isViewingRegistered) {
+                          _searchRegistered = value;
+                        } else {
+                          _searchScanned = value;
+                        }
                       });
                     },
                   ),
-                ],
-              )
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Filtrar por nombre:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  TextField(
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar artículo registrado...',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            SizedBox(height: 20),
-            Expanded(
-              child: itemsToShow.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No hay elementos para mostrar',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: itemsToShow.length,
-                      itemBuilder: (context, index) {
-                        final item = itemsToShow[index];
-                        return Card(
-                          color: Colors.grey[800],
-                          child: ListTile(
-                            title: Text(
-                              isViewingRegistered
-                                  ? item['nombre']
-                                  : item['nombreItem'],
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              isViewingRegistered
-                                  ? 'Responsable: ${item['responsable']}'
-                                  : 'Cantidad: ${item['cantidad']}',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ),
-                        );
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: AppColors.primaryAccent,
+                      onRefresh: () async {
+                        context
+                            .read<InventoryBloc>()
+                            .add(const LoadInventoryRequested());
+                        await context
+                            .read<InventoryBloc>()
+                            .stream
+                            .firstWhere((s) => s is! InventoryLoading);
                       },
+                      child: _buildBody(
+                        loading: loading,
+                        error: error,
+                        scanned: scanned,
+                        registered: registered,
+                        textTheme: textTheme,
+                      ),
                     ),
-            ),
-          ],
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
-      floatingActionButton: !isViewingRegistered
-          ? FloatingActionButton(
-              backgroundColor: Colors.red,
+      floatingActionButton: !_isViewingRegistered
+          ? FloatingActionButton.extended(
+              backgroundColor: AppColors.primaryAccent,
+              foregroundColor: AppColors.background,
               onPressed: () {
                 Navigator.push(
                   context,
@@ -222,9 +151,136 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       builder: (context) => const QRScannerScreen()),
                 );
               },
-              child: Icon(Icons.camera_alt, color: Colors.white),
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text(
+                'ESCANEAR',
+                style: TextStyle(
+                    letterSpacing: 1.5, fontWeight: FontWeight.w600),
+              ),
             )
           : null,
+    );
+  }
+
+  Widget _buildBody({
+    required bool loading,
+    required String? error,
+    required List<Item> scanned,
+    required List<RegisteredItem> registered,
+    required TextTheme textTheme,
+  }) {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (error != null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 80),
+          Center(
+            child: Text(
+              '// $error',
+              style: textTheme.bodyMedium?.copyWith(color: AppColors.error),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_isViewingRegistered) {
+      final filtered = registered
+          .where((i) => i.nombre
+              .toLowerCase()
+              .contains(_searchRegistered.toLowerCase()))
+          .toList();
+      if (filtered.isEmpty) {
+        return _emptyState('// Sin artículos registrados', textTheme);
+      }
+      return ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: filtered.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final item = filtered[index];
+          return AppCard(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.bookmark_outline,
+                    color: AppColors.primaryAccent),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.nombre,
+                          style: textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      Text('Responsable: ${item.apartadoPor}',
+                          style: textTheme.labelMedium),
+                      Text('Fecha: ${item.fecha}  •  Cant: ${item.cantidad}',
+                          style: textTheme.labelMedium),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    final filtered = scanned
+        .where((i) => i.nombre
+            .toLowerCase()
+            .contains(_searchScanned.toLowerCase()))
+        .toList();
+    if (filtered.isEmpty) {
+      return _emptyState('// Sin artículos escaneados', textTheme);
+    }
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: filtered.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final item = filtered[index];
+        return AppCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              const Icon(Icons.inventory_2_outlined,
+                  color: AppColors.primaryAccent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.nombre,
+                        style: textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text('Cantidad: ${item.cantidad}',
+                        style: textTheme.labelMedium),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _emptyState(String message, TextTheme textTheme) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        const SizedBox(height: 80),
+        Center(child: Text(message, style: textTheme.labelMedium)),
+      ],
     );
   }
 }

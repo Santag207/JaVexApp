@@ -1,114 +1,190 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/widgets/widgets.dart';
+import '../../domain/entities/member.dart';
+import '../../domain/entities/task.dart';
+import 'bloc/home_bloc.dart';
+import 'bloc/home_event.dart';
+import 'bloc/home_state.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider<HomeBloc>(
+      create: (_) => GetIt.I<HomeBloc>()..add(const LoadHomeDataRequested()),
+      child: const _HomeView(),
+    );
+  }
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final List<Map<String, dynamic>> _allTasks = [];
-  final List<String> _miembrosActivos = [];
-  final bool _isLoading = false;
+class _HomeView extends StatelessWidget {
+  const _HomeView();
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.red)),
-      );
-    }
-
-    final totalTareasPendientes = _allTasks.length;
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: Colors.black, // Fondo negro
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Título principal con padding superior
-              Padding(
-                padding: EdgeInsets.only(top: 70.0),
-                child: Center(
-                  child: Text(
-                    'Bienvenido de vuelta al semillero',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppColors.primaryAccent,
+          onRefresh: () async {
+            context.read<HomeBloc>().add(const LoadHomeDataRequested());
+            await context
+                .read<HomeBloc>()
+                .stream
+                .firstWhere((s) => s is! HomeLoading);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: BlocBuilder<HomeBloc, HomeState>(
+                builder: (context, state) {
+                  final tasks = state is HomeLoaded ? state.tasks : <Task>[];
+                  final members =
+                      state is HomeLoaded ? state.activeMembers : <Member>[];
+                  final loading = state is HomeLoading || state is HomeInitial;
+                  final error = state is HomeError ? state.message : null;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Bienvenido de vuelta',
+                        style: textTheme.displayMedium,
+                        textAlign: TextAlign.center,
+                      ).fadeInUp(),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.glowCyan(0.25),
+                                blurRadius: 30,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: Image.asset('assets/logo.png', height: 180),
+                        ),
+                      ).fadeInUp(delay: const Duration(milliseconds: 120)),
+                      const SizedBox(height: 24),
+                      AppCard(
+                        glow: true,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 20, horizontal: 16),
+                        child: Column(
+                          children: [
+                            Text('TAREAS PENDIENTES',
+                                style: textTheme.labelMedium),
+                            const SizedBox(height: 8),
+                            loading
+                                ? const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 12),
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : Text(
+                                    '${tasks.length}',
+                                    style:
+                                        textTheme.displayLarge?.copyWith(
+                                      color: AppColors.primaryAccent,
+                                      fontSize: 48,
+                                    ),
+                                  ),
+                          ],
+                        ),
+                      ).fadeInUp(delay: const Duration(milliseconds: 200)),
+                      const SizedBox(height: 24),
+                      Text(
+                        'MIEMBROS EN EL LABORATORIO',
+                        style: textTheme.titleLarge,
+                      ).fadeInUp(delay: const Duration(milliseconds: 280)),
+                      const SizedBox(height: 12),
+                      AppCard(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: _membersList(
+                          loading: loading,
+                          error: error,
+                          members: members,
+                          textTheme: textTheme,
+                        ),
+                      ).fadeInUp(delay: const Duration(milliseconds: 360)),
+                    ],
+                  );
+                },
               ),
-              // Logo centrado en grande
-              Center(
-                child: Image.asset(
-                  'assets/logo.png',
-                  height: 200,
-                ),
-              ),
-              SizedBox(height: 20),
-              // Número de tareas pendientes
-              Center(
-                child: Text(
-                  'Tareas pendientes: $totalTareasPendientes',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              SizedBox(height: 20),
-              // Subtítulo y lista de miembros activos
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Miembros en el Laboratorio:',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              SizedBox(height: 10),
-              // Fondo blanco con bordes redondeados para la lista de miembros activos
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                padding: EdgeInsets.all(12.0),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: _miembrosActivos.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      leading: CircleAvatar(
-                        radius: 8,
-                        backgroundColor: Colors.green,
-                      ),
-                      title: Text(
-                        _miembrosActivos[index],
-                        style: TextStyle(color: Colors.black),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _membersList({
+    required bool loading,
+    required String? error,
+    required List<Member> members,
+    required TextTheme textTheme,
+  }) {
+    if (loading) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (error != null) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          '// $error',
+          style: textTheme.bodyMedium?.copyWith(color: AppColors.error),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+    if (members.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          '// Sin miembros activos por ahora.',
+          style: textTheme.bodyMedium
+              ?.copyWith(color: AppColors.textSecondary),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: members.length,
+      separatorBuilder: (_, __) =>
+          const Divider(color: AppColors.border, height: 1),
+      itemBuilder: (context, index) {
+        return ListTile(
+          leading: Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: AppColors.success,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.success.withValues(alpha: 0.6),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+          ),
+          title: Text(members[index].nombre, style: textTheme.bodyMedium),
+        );
+      },
     );
   }
 }
