@@ -18,6 +18,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<BiometricLoginRequested>(_onBiometricLoginRequested);
     on<BiometricEnableRequested>(_onBiometricEnableRequested);
     on<BiometricDisableRequested>(_onBiometricDisableRequested);
+    on<BiometricSkipped>(_onBiometricSkipped);
+  }
+
+  Future<void> _onBiometricSkipped(
+    BiometricSkipped event,
+    Emitter<AuthState> emit,
+  ) async {
+    final user = _lastAuthenticatedUser;
+    if (user != null) {
+      emit(AuthAuthenticated(user: user));
+    }
   }
 
   Future<void> _onLoginRequested(

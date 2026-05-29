@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_colors.dart';
 import 'bloc/auth_bloc.dart';
 import 'bloc/auth_event.dart';
 import 'bloc/auth_state.dart';
@@ -51,21 +52,31 @@ class _AuthGateState extends State<AuthGate> {
       },
       builder: (context, state) {
         return Scaffold(
-          backgroundColor: Colors.black,
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/logo.png', height: 180, width: 180),
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.glowCyan(0.3),
+                        blurRadius: 40,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Image.asset('assets/logo.png', height: 180, width: 180),
+                ),
                 const SizedBox(height: 24),
                 if (state is AuthUnauthenticated && state.shouldPromptBiometric)
                   Column(
                     children: [
-                      // Ícono tappable — reintenta la biometría al tocarlo
                       IconButton(
                         iconSize: 72,
                         icon: const Icon(Icons.fingerprint,
-                            color: Colors.white70),
+                            color: AppColors.primaryAccent),
                         tooltip: 'Reintentar huella',
                         onPressed: () {
                           context
@@ -76,20 +87,27 @@ class _AuthGateState extends State<AuthGate> {
                       const SizedBox(height: 4),
                       const Text(
                         'Toca para verificar tu identidad',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          letterSpacing: 1.2,
+                        ),
                       ),
                       const SizedBox(height: 24),
                       TextButton(
                         onPressed: () => context.go('/login'),
                         child: const Text(
-                          'Usar contraseña',
-                          style: TextStyle(color: Colors.white70),
+                          'USAR CONTRASEÑA',
+                          style: TextStyle(
+                            color: AppColors.primaryAccent,
+                            letterSpacing: 1.5,
+                          ),
                         ),
                       ),
                     ],
                   )
                 else
-                  const CircularProgressIndicator(color: Colors.white),
+                  const CircularProgressIndicator(),
               ],
             ),
           ),

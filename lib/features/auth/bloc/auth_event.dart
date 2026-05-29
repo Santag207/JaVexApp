@@ -43,3 +43,9 @@ class BiometricEnableRequested extends AuthEvent {
 class BiometricDisableRequested extends AuthEvent {
   const BiometricDisableRequested();
 }
+
+/// El usuario eligió no activar biometría tras el login: pasamos a
+/// AuthAuthenticated sin guardar credenciales para biometría.
+class BiometricSkipped extends AuthEvent {
+  const BiometricSkipped();
+}

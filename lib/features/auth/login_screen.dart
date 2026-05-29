@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/widgets/widgets.dart';
 import 'bloc/auth_bloc.dart';
 import 'bloc/auth_event.dart';
 import 'bloc/auth_state.dart';
@@ -44,6 +46,11 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: AppColors.border),
+        ),
         title: const Text('Inicio con huella o rostro'),
         content: const Text(
           '¿Quieres activar el inicio con huella o rostro para tu próxima sesión? '
@@ -67,18 +74,15 @@ class _LoginScreenState extends State<LoginScreen> {
     if (accepted == true) {
       context.read<AuthBloc>().add(const BiometricEnableRequested());
     } else {
-      // Si el usuario rechaza, emulamos el "completar login normal" forzando
-      // un AuthAuthenticated re-emit a través del bloc actual.
-      // La forma simple: simplemente navegar al menú. El estado en memoria
-      // ya tiene al usuario; el menú podrá leerlo si lo necesita.
+      context.read<AuthBloc>().add(const BiometricSkipped());
       context.go('/menu');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
-      backgroundColor: Colors.black,
       body: BlocListener<AuthBloc, AuthState>(
         listenWhen: (previous, current) {
           return current is AuthAuthenticated ||
@@ -98,81 +102,78 @@ class _LoginScreenState extends State<LoginScreen> {
         },
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
-            return Center(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/logo.png',
-                      height: 220,
-                      width: 220,
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(16.0),
-                      margin: const EdgeInsets.symmetric(horizontal: 20.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16.0),
-                        border: Border.all(color: Colors.black, width: 2),
-                      ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Javex Robotics',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+            return SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.glowCyan(0.3),
+                              blurRadius: 40,
+                              spreadRadius: 4,
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          TextField(
-                            controller: _emailController,
-                            decoration: const InputDecoration(
-                              labelText: 'Correo electrónico',
-                              labelStyle: TextStyle(color: Colors.black),
-                              focusedBorder: UnderlineInputBorder(
-                                borderSide: BorderSide(color: Colors.black),
-                              ),
+                          ],
+                        ),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          height: 180,
+                          width: 180,
+                        ),
+                      ).fadeInUp(),
+                      const SizedBox(height: 24),
+                      Text(
+                        'JAVEX ROBOTICS',
+                        style: textTheme.displayMedium?.copyWith(
+                          color: AppColors.primaryAccent,
+                          letterSpacing: 4,
+                        ),
+                        textAlign: TextAlign.center,
+                      ).fadeInUp(delay: const Duration(milliseconds: 100)),
+                      const SizedBox(height: 8),
+                      Text(
+                        '// Acceso al sistema',
+                        style: textTheme.labelMedium,
+                      ).fadeInUp(delay: const Duration(milliseconds: 150)),
+                      const SizedBox(height: 32),
+                      AppCard(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            AppTextField(
+                              controller: _emailController,
+                              label: 'Correo electrónico',
+                              hint: 'usuario@dominio.com',
+                              keyboardType: TextInputType.emailAddress,
+                              prefixIcon: Icons.alternate_email,
                             ),
-                          ),
-                          TextField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Contraseña',
-                              labelStyle: TextStyle(color: Colors.black),
-                              focusedBorder: UnderlineInputBorder(
-                                borderSide: BorderSide(color: Colors.black),
-                              ),
+                            const SizedBox(height: 16),
+                            AppTextField(
+                              controller: _passwordController,
+                              label: 'Contraseña',
+                              obscureText: true,
+                              prefixIcon: Icons.lock_outline,
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          state is AuthLoading
-                              ? const CircularProgressIndicator()
-                              : ElevatedButton(
-                                  onPressed: _login,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.0),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 32,
-                                      vertical: 16,
-                                    ),
+                            const SizedBox(height: 24),
+                            state is AuthLoading
+                                ? const CircularProgressIndicator()
+                                : AppButton(
+                                    label: 'Iniciar sesión',
+                                    onPressed: _login,
+                                    fullWidth: true,
+                                    glow: true,
+                                    icon: Icons.arrow_forward,
                                   ),
-                                  child: const Text(
-                                    'Iniciar Sesión',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                        ],
-                      ),
-                    ),
-                  ],
+                          ],
+                        ),
+                      ).fadeInUp(delay: const Duration(milliseconds: 200)),
+                    ],
+                  ),
                 ),
               ),
             );
