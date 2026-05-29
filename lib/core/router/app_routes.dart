@@ -7,6 +7,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/pending/pending_screen.dart';
 import '../../features/inventory/inventory_screen.dart';
+import '../../features/nfc/nfc_screen.dart';
 
 class AppRouter {
   static GoRouter createRouter() {
@@ -104,6 +105,19 @@ class AppRouter {
           pageBuilder: (context, state) => CustomTransitionPage<void>(
             key: state.pageKey,
             child: const InventoryScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        ),
+
+        GoRoute(
+          name: 'nfc',
+          path: '/nfc',
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const NfcScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
