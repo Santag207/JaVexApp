@@ -3,10 +3,10 @@ import '../api_service.dart';
 
 /// Implementación del [ApiService] usando el cliente postgrest de Supabase.
 ///
-/// Reemplaza a [DioApiService]/json-server como fuente de datos. Las columnas
-/// en Supabase usan exactamente las mismas claves camelCase que el JSON del
-/// mock, por lo que lo que devuelve postgrest encaja directo en los
-/// `fromJson` de las entidades, sin tocar repositorios ni modelos.
+/// Es la fuente de datos de la app (reemplazó al json-server). Las columnas
+/// en Supabase usan exactamente las mismas claves camelCase que las entidades,
+/// por lo que lo que devuelve postgrest encaja directo en los `fromJson`,
+/// sin tocar repositorios ni modelos.
 class SupabaseApiService implements ApiService {
   final SupabaseClient _client;
 
