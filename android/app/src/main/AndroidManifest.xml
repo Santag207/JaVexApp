@@ -62,4 +62,10 @@
     <!-- Permisos de autenticación biométrica -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+    <!-- Lectura de archivos del dispositivo (selección de documentos).
+         El selector de documentos (SAF) no requiere permiso en runtime; se
+         declara para compatibilidad con versiones antiguas de Android. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 </manifest>

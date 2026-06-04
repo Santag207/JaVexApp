@@ -8,6 +8,8 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/pending/pending_screen.dart';
 import '../../features/inventory/inventory_screen.dart';
 import '../../features/nfc/nfc_screen.dart';
+import '../../features/forms/forms_screen.dart';
+import '../../features/forms/document_management_form_screen.dart';
 
 class AppRouter {
   static GoRouter createRouter() {
@@ -105,6 +107,32 @@ class AppRouter {
           pageBuilder: (context, state) => CustomTransitionPage<void>(
             key: state.pageKey,
             child: const InventoryScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        ),
+
+        GoRoute(
+          name: 'forms',
+          path: '/forms',
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const FormsScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        ),
+
+        GoRoute(
+          name: 'documentManagementForm',
+          path: '/forms/document-management',
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const DocumentManagementFormScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);

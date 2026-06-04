@@ -5,10 +5,12 @@ import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/task_repository_impl.dart';
 import '../../data/repositories/user_repository_impl.dart';
 import '../../data/repositories/inventory_repository_impl.dart';
+import '../../data/repositories/forms_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../domain/repositories/inventory_repository.dart';
+import '../../domain/repositories/forms_repository.dart';
 import '../../features/auth/bloc/auth_bloc.dart';
 import '../../features/home/bloc/home_bloc.dart';
 import '../../features/menu/bloc/menu_bloc.dart';
@@ -16,6 +18,7 @@ import '../../features/pending/bloc/pending_bloc.dart';
 import '../../features/profile/bloc/profile_bloc.dart';
 import '../../features/inventory/bloc/inventory_bloc.dart';
 import '../../features/add_hours/bloc/add_hours_bloc.dart';
+import '../../features/forms/bloc/forms_bloc.dart';
 import '../services/biometric_service.dart';
 import '../services/secure_storage_service.dart';
 
@@ -47,6 +50,9 @@ void setupServiceLocator() {
   );
   getIt.registerSingleton<InventoryRepository>(
     InventoryRepositoryImpl(getIt<ApiService>()),
+  );
+  getIt.registerSingleton<FormsRepository>(
+    FormsRepositoryImpl(getIt<ApiService>()),
   );
 
   // ==================== FACTORIES (BLoCs) ====================
@@ -80,5 +86,9 @@ void setupServiceLocator() {
 
   getIt.registerFactory<AddHoursBloc>(
     () => AddHoursBloc(),
+  );
+
+  getIt.registerFactory<FormsBloc>(
+    () => FormsBloc(formsRepository: getIt<FormsRepository>()),
   );
 }

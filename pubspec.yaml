@@ -13,7 +13,13 @@ dependencies:
   url_launcher: ^6.1.7
   dio: ^5.4.0
   supabase_flutter: ^2.8.0
-  
+
+  # Selección de archivos del dispositivo (Formulario de Gestión Documental)
+  file_picker: ^8.1.2
+
+  # Calendario (se usa en producción en pending_screen.dart)
+  table_calendar: ^3.0.6
+
   # State Management - BLoC Pattern
   flutter_bloc: ^8.1.3
   bloc: ^8.1.1
@@ -36,7 +42,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  table_calendar: ^3.0.6
 
   # Testing
   mocktail: ^1.0.0

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
@@ -195,6 +196,8 @@ class _PendingScreenState extends State<PendingScreen> {
                     _showAgregarPendienteDialog();
                   } else if (value == 'Completar') {
                     _showCompletarPendienteDialog();
+                  } else if (value == 'Formularios') {
+                    context.pushNamed('forms');
                   } else if (value == 'Notion') {
                     _showNotionDialog();
                   }
@@ -208,6 +211,11 @@ class _PendingScreenState extends State<PendingScreen> {
                   PopupMenuItem(
                     value: 'Completar',
                     child: Text('Completar pendiente',
+                        style: TextStyle(color: AppColors.textPrimary)),
+                  ),
+                  PopupMenuItem(
+                    value: 'Formularios',
+                    child: Text('Formularios',
                         style: TextStyle(color: AppColors.textPrimary)),
                   ),
                   PopupMenuItem(
