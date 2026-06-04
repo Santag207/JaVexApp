@@ -64,4 +64,5 @@ flutter:
   assets:
     - assets/logo.png
     - assets/profile_picture.jpg
+    - assets/obi.gif
 

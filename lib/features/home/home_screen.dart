@@ -9,6 +9,8 @@ import '../../domain/entities/task.dart';
 import 'bloc/home_bloc.dart';
 import 'bloc/home_event.dart';
 import 'bloc/home_state.dart';
+import '../auth/bloc/auth_bloc.dart';
+import '../auth/bloc/auth_state.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -56,7 +58,17 @@ class _HomeView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _HomeHeader().fadeInUp(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 40),
+                      Center(
+                        child: Image.asset(
+                          'assets/obi.gif',
+                          height: 220,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox.shrink(),
+                        ),
+                      ).fadeInUp(delay: const Duration(milliseconds: 100)),
+                      const SizedBox(height: 16),
                       AppCard(
                         glow: true,
                         padding: const EdgeInsets.symmetric(
@@ -175,6 +187,15 @@ class _HomeView extends StatelessWidget {
 class _HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    String nombre = '';
+    if (authState is AuthAuthenticated) {
+      nombre = authState.user.nombre;
+    } else if (authState is AuthAuthenticatedAwaitingBiometricChoice) {
+      nombre = authState.user.nombre;
+    }
+    final saludo = nombre.isEmpty ? 'Hola' : 'Hola, $nombre';
+
     return Row(
       children: [
         Container(
@@ -191,8 +212,8 @@ class _HomeHeader extends StatelessWidget {
           child: Image.asset('assets/logo.png', height: 52, width: 52),
         ),
         const SizedBox(width: 14),
-        const Expanded(
-          child: HologramText('Hello here!', size: 16),
+        Expanded(
+          child: HologramText(saludo, size: 16),
         ),
         const SizedBox(width: 12),
         _NfcButton(),
