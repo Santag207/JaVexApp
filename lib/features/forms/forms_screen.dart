@@ -31,16 +31,16 @@ class FormsScreen extends StatelessWidget {
           const SizedBox(height: 16),
           _FormCard(
             title: 'Reporte Semanal Individual',
-            description: 'Próximamente.',
+            description: 'Avances, metas de la semana y asistencia.',
             icon: Icons.assignment_ind_outlined,
-            enabled: false,
+            onTap: () => context.pushNamed('weeklyIndividualForm'),
           ).fadeInUp(delay: const Duration(milliseconds: 80)),
           const SizedBox(height: 16),
           _FormCard(
             title: 'Reporte Semanal Coordinador',
-            description: 'Próximamente.',
+            description: 'Estado del proyecto, hitos y novedades del equipo.',
             icon: Icons.supervisor_account_outlined,
-            enabled: false,
+            onTap: () => context.pushNamed('weeklyCoordinatorForm'),
           ).fadeInUp(delay: const Duration(milliseconds: 160)),
         ],
       ),
@@ -54,72 +54,41 @@ class _FormCard extends StatelessWidget {
     required this.description,
     required this.icon,
     this.onTap,
-    this.enabled = true,
   });
 
   final String title;
   final String description;
   final IconData icon;
   final VoidCallback? onTap;
-  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return Opacity(
-      opacity: enabled ? 1 : 0.5,
-      child: AppCard(
-        onTap: enabled ? onTap : null,
-        glow: enabled,
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: enabled ? AppColors.primaryAccent : AppColors.textSecondary,
-              size: 32,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: textTheme.titleLarge?.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
+    return AppCard(
+      onTap: onTap,
+      glow: true,
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primaryAccent, size: 32),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: textTheme.titleLarge?.copyWith(
+                    color: AppColors.textPrimary,
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    description,
-                    style: textTheme.bodySmall,
-                  ),
-                  if (!enabled) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'PRÓXIMAMENTE',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: AppColors.textSecondary,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+                const SizedBox(height: 6),
+                Text(description, style: textTheme.bodySmall),
+              ],
             ),
-            if (enabled)
-              const Icon(Icons.chevron_right, color: AppColors.primaryAccent),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.primaryAccent),
+        ],
       ),
     );
   }

@@ -8,6 +8,7 @@ class FormsBloc extends Bloc<FormsEvent, FormsState> {
 
   FormsBloc({required this.formsRepository}) : super(const FormsInitial()) {
     on<SubmitFormFilesRequested>(_onSubmitFormFilesRequested);
+    on<SubmitFormTextRequested>(_onSubmitFormTextRequested);
   }
 
   Future<void> _onSubmitFormFilesRequested(
@@ -30,9 +31,27 @@ class FormsBloc extends Bloc<FormsEvent, FormsState> {
           bytes: file.bytes,
         );
       }
-      emit(FormsSuccess(uploadedCount: event.files.length));
+      emit(FormsSuccess(
+          message: 'Se subieron ${event.files.length} archivo(s).'));
     } catch (e) {
       emit(FormsError(message: 'Error al subir archivos: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _onSubmitFormTextRequested(
+    SubmitFormTextRequested event,
+    Emitter<FormsState> emit,
+  ) async {
+    emit(const FormsUploading());
+
+    try {
+      await formsRepository.submitText(
+        formType: event.formType,
+        answers: event.answers,
+      );
+      emit(const FormsSuccess(message: 'Reporte enviado correctamente.'));
+    } catch (e) {
+      emit(FormsError(message: 'Error al enviar el reporte: ${e.toString()}'));
     }
   }
 }

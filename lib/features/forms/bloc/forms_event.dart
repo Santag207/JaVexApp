@@ -39,3 +39,17 @@ class SubmitFormFilesRequested extends FormsEvent {
   @override
   List<Object?> get props => [formType, files];
 }
+
+/// Envía las respuestas de un formulario de texto.
+class SubmitFormTextRequested extends FormsEvent {
+  final String formType;
+  final Map<String, dynamic> answers;
+
+  const SubmitFormTextRequested({
+    required this.formType,
+    required this.answers,
+  });
+
+  @override
+  List<Object?> get props => [formType, answers];
+}

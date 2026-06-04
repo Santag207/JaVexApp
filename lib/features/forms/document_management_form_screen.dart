@@ -190,7 +190,7 @@ class _DocumentManagementFormViewState
             // visible tras volver a la pantalla anterior (lista de formularios).
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Se subieron ${state.uploadedCount} archivo(s).'),
+                content: Text(state.message),
                 backgroundColor: AppColors.success,
               ),
             );

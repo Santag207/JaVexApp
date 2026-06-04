@@ -16,12 +16,12 @@ class FormsUploading extends FormsState {
 }
 
 class FormsSuccess extends FormsState {
-  final int uploadedCount;
+  final String message;
 
-  const FormsSuccess({required this.uploadedCount});
+  const FormsSuccess({required this.message});
 
   @override
-  List<Object?> get props => [uploadedCount];
+  List<Object?> get props => [message];
 }
 
 class FormsError extends FormsState {
