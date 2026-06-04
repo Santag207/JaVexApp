@@ -45,3 +45,6 @@ app.*.map.json
 # Documentation files (kept outside repo)
 *.pdf
 _xae_doc.txt
+
+# Supabase setup script (run manually in the dashboard, not app code)
+supabase_setup.sql
