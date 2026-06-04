@@ -11,7 +11,9 @@ dependencies:
   flutter:
     sdk: flutter
   url_launcher: ^6.1.7
-
+  dio: ^5.4.0
+  supabase_flutter: ^2.8.0
+  
   # State Management - BLoC Pattern
   flutter_bloc: ^8.1.3
   bloc: ^8.1.1
@@ -26,9 +28,6 @@ dependencies:
   # Autenticación biométrica y almacenamiento seguro
   local_auth: ^2.2.0
   flutter_secure_storage: ^9.0.0
-
-  # Backend - Supabase
-  supabase_flutter: ^2.8.0
 
   # Tipografías y animaciones del sistema de diseño
   google_fonts: ^6.1.0
