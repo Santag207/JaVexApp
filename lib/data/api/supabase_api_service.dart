@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../api_service.dart';
 
@@ -17,23 +19,75 @@ class SupabaseApiService implements ApiService {
       (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
   @override
-  Future<Map<String, dynamic>?> login(String email, String password) async {
+  Future<Map<String, dynamic>?> signInWithPassword(
+      String email, String password) async {
     try {
-      // El password se valida en el cliente (replica el flujo del mock).
+      final res = await _client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      final authId = res.user?.id;
+      if (authId == null) return null;
+      return _profileByAuthId(authId);
+    } on AuthException catch (e) {
+      // Credenciales inválidas u otros errores de Auth: el flujo de login
+      // los trata como "credenciales incorrectas".
+      print('Error en signInWithPassword: ${e.message}');
+      return null;
+    } catch (e) {
+      print('Error en signInWithPassword: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<void> signOut() async {
+    try {
+      await _client.auth.signOut();
+    } catch (e) {
+      print('Error en signOut: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>?> currentUserProfile() async {
+    final authId = _client.auth.currentUser?.id;
+    if (authId == null) return null;
+    return _profileByAuthId(authId);
+  }
+
+  @override
+  String? currentRefreshToken() => _client.auth.currentSession?.refreshToken;
+
+  @override
+  String? currentAuthUserId() => _client.auth.currentUser?.id;
+
+  @override
+  String? currentAuthEmail() => _client.auth.currentUser?.email;
+
+  @override
+  Future<bool> restoreSession(String refreshToken) async {
+    try {
+      final res = await _client.auth.setSession(refreshToken);
+      return res.session != null;
+    } catch (e) {
+      print('Error al restaurar sesión: $e');
+      return false;
+    }
+  }
+
+  /// Busca el perfil de la tabla `users` vinculado a la cuenta de Auth.
+  Future<Map<String, dynamic>?> _profileByAuthId(String authId) async {
+    try {
       final data = await _client
           .from('users')
           .select()
-          .eq('email', email)
-          .limit(1);
-      if (data.isNotEmpty) {
-        final user = Map<String, dynamic>.from(data.first);
-        if (user['password'] == password) {
-          return user;
-        }
-      }
-      return null;
+          .eq('auth_id', authId)
+          .maybeSingle();
+      return data == null ? null : Map<String, dynamic>.from(data);
     } catch (e) {
-      print('Error en login: $e');
+      print('Error al obtener perfil por auth_id: $e');
       return null;
     }
   }
@@ -145,6 +199,60 @@ class SupabaseApiService implements ApiService {
       return _asList(data);
     } catch (e) {
       print('Error al obtener subsistemas: $e');
+      return [];
+    }
+  }
+
+  // ==================== Formularios ====================
+
+  static const String _formsBucket = 'form-files';
+
+  @override
+  Future<String> uploadFormFile(String storagePath, List<int> bytes) async {
+    try {
+      await _client.storage.from(_formsBucket).uploadBinary(
+            storagePath,
+            Uint8List.fromList(bytes),
+            fileOptions: const FileOptions(upsert: true),
+          );
+      return storagePath;
+    } catch (e) {
+      print('Error al subir archivo de formulario: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> createFormFileSubmission(
+      Map<String, dynamic> submission) async {
+    try {
+      // El id (identidad) y user_auth_id (default auth.uid()) los pone el backend.
+      final payload = Map<String, dynamic>.from(submission)
+        ..remove('id')
+        ..remove('user_auth_id');
+      final data = await _client
+          .from('form_file_submissions')
+          .insert(payload)
+          .select()
+          .single();
+      return Map<String, dynamic>.from(data);
+    } catch (e) {
+      print('Error al registrar archivo de formulario: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getFormFileSubmissions(
+      String formType) async {
+    try {
+      final data = await _client
+          .from('form_file_submissions')
+          .select()
+          .eq('form_type', formType);
+      return _asList(data);
+    } catch (e) {
+      print('Error al obtener archivos de formulario: $e');
       return [];
     }
   }

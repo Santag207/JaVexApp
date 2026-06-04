@@ -14,6 +14,10 @@ class User extends Equatable {
   final String liderSubsistema;
   final Map<String, int> tareasCompletadasPorSubsistema;
 
+  /// UUID de la cuenta en Supabase Auth (columna `auth_id`). Vacío si el perfil
+  /// aún no está vinculado a una cuenta de Auth.
+  final String authId;
+
   const User({
     required this.id,
     required this.email,
@@ -27,6 +31,7 @@ class User extends Equatable {
     required this.subsistemas,
     required this.liderSubsistema,
     required this.tareasCompletadasPorSubsistema,
+    this.authId = '',
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -49,6 +54,7 @@ class User extends Equatable {
           (json['tareasCompletadasPorSubsistema'] as Map<String, dynamic>?)
                   ?.map((key, value) => MapEntry(key, value as int)) ??
               {},
+      authId: json['auth_id'] as String? ?? '',
     );
   }
 
@@ -66,6 +72,7 @@ class User extends Equatable {
       'subsistemas': subsistemas,
       'liderSubsistema': liderSubsistema,
       'tareasCompletadasPorSubsistema': tareasCompletadasPorSubsistema,
+      'auth_id': authId,
     };
   }
 

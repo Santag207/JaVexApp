@@ -2,9 +2,31 @@
 /// Cuando tengan el backend real, solo necesitan crear otra implementación
 /// de esta misma interface apuntando al servidor real.
 abstract class ApiService {
-  /// Login: busca un usuario por email y password.
-  /// Retorna el Map del usuario si las credenciales son correctas, null si no.
-  Future<Map<String, dynamic>?> login(String email, String password);
+  /// Inicia sesión con Supabase Auth (email + password). Si las credenciales
+  /// son válidas, devuelve el perfil de la tabla `users` vinculado por `auth_id`.
+  /// Retorna null si las credenciales son incorrectas o no hay perfil asociado.
+  Future<Map<String, dynamic>?> signInWithPassword(String email, String password);
+
+  /// Cierra la sesión de Supabase Auth.
+  Future<void> signOut();
+
+  /// Si hay una sesión de Supabase Auth activa, devuelve el perfil de `users`
+  /// vinculado al usuario autenticado; null si no hay sesión o perfil.
+  Future<Map<String, dynamic>?> currentUserProfile();
+
+  /// Refresh token de la sesión activa (se persiste para el desbloqueo
+  /// biométrico). Null si no hay sesión.
+  String? currentRefreshToken();
+
+  /// UUID (auth.uid()) del usuario autenticado, o null si no hay sesión.
+  String? currentAuthUserId();
+
+  /// Email del usuario autenticado, o null si no hay sesión.
+  String? currentAuthEmail();
+
+  /// Restaura una sesión a partir de un refresh token (usado tras verificar
+  /// la huella/rostro). Devuelve true si la sesión se restauró correctamente.
+  Future<bool> restoreSession(String refreshToken);
 
   /// Obtiene todas las tareas. Opcionalmente filtra por subsistema.
   Future<List<Map<String, dynamic>>> getTasks({String? subsistema});
@@ -32,4 +54,19 @@ abstract class ApiService {
 
   /// Obtiene la lista de subsistemas disponibles.
   Future<List<Map<String, dynamic>>> getSubsistemas();
+
+  // ==================== Formularios ====================
+
+  /// Sube los bytes de un archivo al bucket `form-files` en la ruta indicada.
+  /// Devuelve la ruta de almacenamiento (`storage_path`).
+  Future<String> uploadFormFile(String storagePath, List<int> bytes);
+
+  /// Registra en la tabla `form_file_submissions` los metadatos de un archivo
+  /// subido. `user_auth_id` lo asigna el backend (default `auth.uid()`).
+  Future<Map<String, dynamic>> createFormFileSubmission(
+      Map<String, dynamic> submission);
+
+  /// Lista los registros de archivos subidos por el usuario autenticado para
+  /// un tipo de formulario (filtrado por RLS = `auth.uid()`).
+  Future<List<Map<String, dynamic>>> getFormFileSubmissions(String formType);
 }
