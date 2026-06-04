@@ -85,6 +85,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final deviceSupports = await authRepository.isBiometricAvailableOnDevice();
     final biometricEnabled = await authRepository.isBiometricLoginEnabled();
 
+    // Si la biometría está activada, dejamos que el AuthGate lance el prompt.
+    // Si no, pero ya hay una sesión de Supabase persistida, entramos directo.
+    if (!biometricEnabled) {
+      final user = await authRepository.currentUser();
+      if (user != null) {
+        _lastAuthenticatedUser = user;
+        emit(AuthAuthenticated(user: user));
+        return;
+      }
+    }
+
     emit(AuthUnauthenticated(
       biometricEnabled: biometricEnabled,
       deviceSupportsBiometric: deviceSupports,
@@ -130,12 +141,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return;
     }
 
-    // TODO: cuando el backend emita JWT real, reemplazar por el access token.
-    // Por ahora persistimos el id del usuario como token mock para el flujo.
-    final mockToken = 'user_${user.id}';
-
-    await authRepository.enableBiometricLogin(token: mockToken, user: user);
-    emit(AuthAuthenticated(user: user));
+    try {
+      await authRepository.enableBiometricLogin(user: user);
+      emit(AuthAuthenticated(user: user));
+    } catch (e) {
+      emit(AuthError(message: 'No se pudo activar la biometría: ${e.toString()}'));
+    }
   }
 
   Future<void> _onBiometricDisableRequested(

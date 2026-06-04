@@ -19,13 +19,21 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<User?> login(String email, String password) async {
-    final result = await _apiService.login(email, password);
+    final result = await _apiService.signInWithPassword(email, password);
+    if (result == null) return null;
+    return User.fromJson(result);
+  }
+
+  @override
+  Future<User?> currentUser() async {
+    final result = await _apiService.currentUserProfile();
     if (result == null) return null;
     return User.fromJson(result);
   }
 
   @override
   Future<void> logout() async {
+    await _apiService.signOut();
     await _secureStorage.clearAll();
   }
 
@@ -37,9 +45,35 @@ class AuthRepositoryImpl implements AuthRepository {
     if (!ok) return null;
 
     final userJson = await _secureStorage.readUserJson();
-    final token = await _secureStorage.readAuthToken();
-    if (userJson == null || token == null) return null;
+    final refreshToken = await _secureStorage.readAuthToken();
+    if (userJson == null || refreshToken == null) return null;
 
+    // Caso normal: Supabase persiste y auto-refresca la sesión entre reinicios.
+    // Si ya hay sesión viva, la usamos y refrescamos el refresh token guardado
+    // (rota en cada refresco, así el respaldo se mantiene útil).
+    final liveProfile = await _apiService.currentUserProfile();
+    if (liveProfile != null) {
+      final fresh = _apiService.currentRefreshToken();
+      if (fresh != null) {
+        await _secureStorage.saveAuthToken(fresh);
+      }
+      return User.fromJson(liveProfile);
+    }
+
+    // Respaldo: no hay sesión viva → restaurarla con el refresh token guardado.
+    final restored = await _apiService.restoreSession(refreshToken);
+    if (!restored) return null;
+
+    final restoredProfile = await _apiService.currentUserProfile();
+    if (restoredProfile != null) {
+      final fresh = _apiService.currentRefreshToken();
+      if (fresh != null) {
+        await _secureStorage.saveAuthToken(fresh);
+      }
+      return User.fromJson(restoredProfile);
+    }
+
+    // Último recurso: rehidratar desde el JSON persistido.
     try {
       return User.fromJson(jsonDecode(userJson) as Map<String, dynamic>);
     } catch (_) {
@@ -62,10 +96,15 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> enableBiometricLogin({
-    required String token,
     required User user,
   }) async {
-    await _secureStorage.saveAuthToken(token);
+    // Persistimos el refresh token real de la sesión activa: con él se
+    // restaurará la sesión de Supabase tras verificar la huella/rostro.
+    final refreshToken = _apiService.currentRefreshToken();
+    if (refreshToken == null) {
+      throw StateError('No hay sesión activa para activar la biometría');
+    }
+    await _secureStorage.saveAuthToken(refreshToken);
     await _secureStorage.saveUserJson(jsonEncode(user.toJson()));
     await _secureStorage.setBiometricEnabled(true);
   }

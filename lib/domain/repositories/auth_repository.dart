@@ -4,6 +4,10 @@ abstract class AuthRepository {
   /// Login tradicional con email/password. Devuelve el usuario o null.
   Future<User?> login(String email, String password);
 
+  /// Si hay una sesión de Supabase activa (persistida y refrescada por el SDK),
+  /// devuelve el usuario asociado; null si no hay sesión.
+  Future<User?> currentUser();
+
   /// Cierra sesión: limpia tokens y desactiva la biometría persistida.
   Future<void> logout();
 
@@ -17,9 +21,10 @@ abstract class AuthRepository {
   /// True si el dispositivo soporta biometría y tiene huella/rostro enrolado.
   Future<bool> isBiometricAvailableOnDevice();
 
-  /// Persiste token y user en secure storage y marca el flag biométrico.
-  /// La huella/rostro NO se guarda — sólo el token que protegerá.
-  Future<void> enableBiometricLogin({required String token, required User user});
+  /// Persiste el refresh token de la sesión actual y el user en secure storage,
+  /// y marca el flag biométrico. La huella/rostro NO se guarda — sólo el token
+  /// que se usará para restaurar la sesión tras la verificación biométrica.
+  Future<void> enableBiometricLogin({required User user});
 
   /// Quita el flag y borra los datos persistidos.
   Future<void> disableBiometricLogin();
