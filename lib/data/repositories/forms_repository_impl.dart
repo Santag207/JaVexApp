@@ -44,4 +44,15 @@ class FormsRepositoryImpl implements FormsRepository {
     final result = await _apiService.getFormFileSubmissions(formType);
     return result.map((json) => FormFileSubmission.fromJson(json)).toList();
   }
+
+  @override
+  Future<void> submitText({
+    required String formType,
+    required Map<String, dynamic> answers,
+  }) async {
+    await _apiService.createFormTextSubmission({
+      'form_type': formType,
+      'answers': answers,
+    });
+  }
 }

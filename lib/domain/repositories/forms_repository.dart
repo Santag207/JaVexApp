@@ -14,4 +14,11 @@ abstract class FormsRepository {
 
   /// Lista los archivos que el usuario autenticado ya subió para un formulario.
   Future<List<FormFileSubmission>> getSubmissions(String formType);
+
+  /// Registra las respuestas de un formulario de texto, referenciadas al
+  /// usuario autenticado. `answers` es un mapa pregunta → respuesta.
+  Future<void> submitText({
+    required String formType,
+    required Map<String, dynamic> answers,
+  });
 }

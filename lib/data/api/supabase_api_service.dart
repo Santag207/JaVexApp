@@ -256,4 +256,24 @@ class SupabaseApiService implements ApiService {
       return [];
     }
   }
+
+  @override
+  Future<Map<String, dynamic>> createFormTextSubmission(
+      Map<String, dynamic> submission) async {
+    try {
+      // El id (identidad) y user_auth_id (default auth.uid()) los pone el backend.
+      final payload = Map<String, dynamic>.from(submission)
+        ..remove('id')
+        ..remove('user_auth_id');
+      final data = await _client
+          .from('form_text_submissions')
+          .insert(payload)
+          .select()
+          .single();
+      return Map<String, dynamic>.from(data);
+    } catch (e) {
+      print('Error al registrar respuestas de formulario: $e');
+      rethrow;
+    }
+  }
 }

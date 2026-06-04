@@ -69,4 +69,10 @@ abstract class ApiService {
   /// Lista los registros de archivos subidos por el usuario autenticado para
   /// un tipo de formulario (filtrado por RLS = `auth.uid()`).
   Future<List<Map<String, dynamic>>> getFormFileSubmissions(String formType);
+
+  /// Registra en la tabla `form_text_submissions` las respuestas de un
+  /// formulario de texto. `user_auth_id` lo asigna el backend (default
+  /// `auth.uid()`). `answers` es un objeto con las respuestas por pregunta.
+  Future<Map<String, dynamic>> createFormTextSubmission(
+      Map<String, dynamic> submission);
 }
