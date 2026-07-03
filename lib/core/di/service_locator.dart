@@ -13,6 +13,7 @@ import '../../domain/repositories/inventory_repository.dart';
 import '../../domain/repositories/forms_repository.dart';
 import '../../features/auth/bloc/auth_bloc.dart';
 import '../../features/home/bloc/home_bloc.dart';
+import '../../features/dashboard/bloc/dashboard_bloc.dart';
 import '../../features/menu/bloc/menu_bloc.dart';
 import '../../features/pending/bloc/pending_bloc.dart';
 import '../../features/profile/bloc/profile_bloc.dart';
@@ -78,6 +79,13 @@ void setupServiceLocator() {
 
   getIt.registerFactory<ProfileBloc>(
     () => ProfileBloc(userRepository: getIt<UserRepository>()),
+  );
+
+  getIt.registerFactory<DashboardBloc>(
+    () => DashboardBloc(
+      taskRepository: getIt<TaskRepository>(),
+      userRepository: getIt<UserRepository>(),
+    ),
   );
 
   getIt.registerFactory<InventoryBloc>(

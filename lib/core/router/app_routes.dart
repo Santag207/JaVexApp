@@ -4,6 +4,7 @@ import '../../features/auth/auth_gate.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/menu/menu_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/pending/pending_screen.dart';
 import '../../features/inventory/inventory_screen.dart';
@@ -83,6 +84,19 @@ class AppRouter {
           pageBuilder: (context, state) => CustomTransitionPage<void>(
             key: state.pageKey,
             child: const ProfileScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        ),
+
+        GoRoute(
+          name: 'dashboard',
+          path: '/dashboard',
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const DashboardScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
