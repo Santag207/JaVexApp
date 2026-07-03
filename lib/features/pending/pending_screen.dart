@@ -6,7 +6,9 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/widgets.dart';
+import '../../domain/entities/user.dart';
 import '../../domain/repositories/task_repository.dart';
+import '../../domain/repositories/user_repository.dart';
 import '../auth/bloc/auth_bloc.dart';
 import '../auth/bloc/auth_state.dart';
 
@@ -19,11 +21,33 @@ class PendingScreen extends StatefulWidget {
 
 class _PendingScreenState extends State<PendingScreen> {
   final TaskRepository _taskRepository = GetIt.I<TaskRepository>();
+  final UserRepository _userRepository = GetIt.I<UserRepository>();
 
   Map<String, List<Map<String, dynamic>>> tareasPorSubsistema = {};
+  List<User> _usuarios = [];
   String? _nombreUsuario;
   String? _errorMessage;
   bool _isLoading = true;
+
+  /// Devuelve los usuarios que pertenecen a un subsistema (para asignar
+  /// responsables a una tarea de ese subsistema).
+  List<User> _usuariosDeSubsistema(String subsistema) =>
+      _usuarios.where((u) => u.subsistemas.contains(subsistema)).toList();
+
+  /// Nombres de los responsables a partir de sus IDs.
+  String _nombresResponsables(List<int> ids) {
+    if (ids.isEmpty) return 'Sin asignar';
+    final nombres = ids
+        .map((id) {
+          final match =
+              _usuarios.where((u) => u.id == id).toList();
+          if (match.isEmpty) return null;
+          return '${match.first.nombre} ${match.first.apellidos}'.trim();
+        })
+        .whereType<String>()
+        .toList();
+    return nombres.isEmpty ? 'Sin asignar' : nombres.join(', ');
+  }
 
   String subsistemaSeleccionado = 'Logística';
   DateTime focusedDay = DateTime.now();
@@ -47,7 +71,8 @@ class _PendingScreenState extends State<PendingScreen> {
       _errorMessage = null;
     });
     try {
-      final tasks = await _taskRepository.getTasks();
+      final tasks = await _taskRepository.getTasks(estado: 'pendiente');
+      final usuarios = await _userRepository.getUsers();
       final Map<String, List<Map<String, dynamic>>> grouped = {};
       for (final t in tasks) {
         final sub = t.subsistema.isEmpty ? 'Sin subsistema' : t.subsistema;
@@ -60,11 +85,13 @@ class _PendingScreenState extends State<PendingScreen> {
           'fecha': DateTime.tryParse(t.fecha) ?? DateTime.now(),
           'subsistema': sub,
           'nombreCreador': t.nombreCreador,
+          'responsableIds': t.responsableIds,
         });
       }
       if (!mounted) return;
       setState(() {
         tareasPorSubsistema = grouped;
+        _usuarios = usuarios;
         if (!grouped.containsKey(subsistemaSeleccionado) && grouped.isNotEmpty) {
           subsistemaSeleccionado = grouped.keys.first;
         }
@@ -194,8 +221,8 @@ class _PendingScreenState extends State<PendingScreen> {
                 onSelected: (String value) {
                   if (value == 'Agregar') {
                     _showAgregarPendienteDialog();
-                  } else if (value == 'Completar') {
-                    _showCompletarPendienteDialog();
+                  } else if (value == 'Dashboard') {
+                    context.pushNamed('dashboard');
                   } else if (value == 'Formularios') {
                     context.pushNamed('forms');
                   } else if (value == 'Notion') {
@@ -209,8 +236,8 @@ class _PendingScreenState extends State<PendingScreen> {
                         style: TextStyle(color: AppColors.textPrimary)),
                   ),
                   PopupMenuItem(
-                    value: 'Completar',
-                    child: Text('Completar pendiente',
+                    value: 'Dashboard',
+                    child: Text('Dashboard',
                         style: TextStyle(color: AppColors.textPrimary)),
                   ),
                   PopupMenuItem(
@@ -382,6 +409,7 @@ class _PendingScreenState extends State<PendingScreen> {
     String? titulo, descripcion, urgencia = '!';
     DateTime? fechaSeleccionada;
     String subsistemaSeleccionadoAgregar = subsistemaSeleccionado;
+    final Set<int> responsablesSeleccionados = {};
 
     showModalBottomSheet(
       context: context,
@@ -400,7 +428,8 @@ class _PendingScreenState extends State<PendingScreen> {
                 bottom: MediaQuery.of(context).viewInsets.bottom + 16.0,
                 top: 16.0,
               ),
-              child: Column(
+              child: SingleChildScrollView(
+                child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -430,6 +459,9 @@ class _PendingScreenState extends State<PendingScreen> {
                     onChanged: (String? nuevoValor) {
                       setModalState(() {
                         subsistemaSeleccionadoAgregar = nuevoValor!;
+                        // Al cambiar de subsistema, los responsables previos
+                        // ya no aplican.
+                        responsablesSeleccionados.clear();
                       });
                     },
                   ),
@@ -452,6 +484,63 @@ class _PendingScreenState extends State<PendingScreen> {
                       fontSize: 12,
                       letterSpacing: 1.2,
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Selección de responsables (usuarios del subsistema)
+                  const Text(
+                    'RESPONSABLES',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Builder(
+                    builder: (context) {
+                      final candidatos =
+                          _usuariosDeSubsistema(subsistemaSeleccionadoAgregar);
+                      if (candidatos.isEmpty) {
+                        return const Text(
+                          '// Sin usuarios en este subsistema',
+                          style: TextStyle(
+                              color: AppColors.textSecondary, fontSize: 12),
+                        );
+                      }
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: candidatos.map((u) {
+                          final sel =
+                              responsablesSeleccionados.contains(u.id);
+                          return FilterChip(
+                            label: Text(
+                              '${u.nombre} ${u.apellidos}'.trim(),
+                              style: TextStyle(
+                                color: sel
+                                    ? AppColors.background
+                                    : AppColors.textPrimary,
+                                fontSize: 12,
+                              ),
+                            ),
+                            selected: sel,
+                            showCheckmark: false,
+                            backgroundColor: AppColors.cardBackground,
+                            selectedColor: AppColors.primaryAccent,
+                            side: const BorderSide(color: AppColors.border),
+                            onSelected: (value) {
+                              setModalState(() {
+                                if (value) {
+                                  responsablesSeleccionados.add(u.id);
+                                } else {
+                                  responsablesSeleccionados.remove(u.id);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   // Selección de Prioridad
@@ -532,6 +621,7 @@ class _PendingScreenState extends State<PendingScreen> {
                                 '${fechaSeleccionada!.year.toString().padLeft(4, '0')}-${fechaSeleccionada!.month.toString().padLeft(2, '0')}-${fechaSeleccionada!.day.toString().padLeft(2, '0')}',
                             'subsistema': subsistemaSeleccionadoAgregar,
                             'nombreCreador': _nombreUsuario ?? 'Desconocido',
+                            'responsables': responsablesSeleccionados.toList(),
                           });
                           final newTask = {
                             'id': createdRaw.id,
@@ -543,6 +633,8 @@ class _PendingScreenState extends State<PendingScreen> {
                                     fechaSeleccionada!,
                             'subsistema': subsistemaSeleccionadoAgregar,
                             'nombreCreador': createdRaw.nombreCreador,
+                            'responsableIds':
+                                responsablesSeleccionados.toList(),
                           };
 
                           setState(() {
@@ -574,135 +666,6 @@ class _PendingScreenState extends State<PendingScreen> {
                   ),
                 ],
               ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Modal para completar pendiente
-  void _showCompletarPendienteDialog() {
-    String subsistemaSeleccionadoCompletar = subsistemaSeleccionado;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.cardBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-      ),
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            final pendientes =
-                tareasPorSubsistema[subsistemaSeleccionadoCompletar] ?? [];
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16.0,
-                right: 16.0,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16.0,
-                top: 16.0,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'COMPLETAR TAREAS',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primaryAccent,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'SUBSISTEMAS',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButton<String>(
-                    value: subsistemaSeleccionadoCompletar,
-                    dropdownColor: AppColors.cardBackground,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                    ),
-                    iconEnabledColor: AppColors.primaryAccent,
-                    items: tareasPorSubsistema.keys.map((String subsistema) {
-                      return DropdownMenuItem<String>(
-                        value: subsistema,
-                        child: Text(
-                          subsistema,
-                          style: const TextStyle(color: AppColors.textPrimary),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (String? nuevoValor) {
-                      setModalState(() {
-                        subsistemaSeleccionadoCompletar = nuevoValor!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  if (pendientes.isEmpty)
-                    const Text(
-                      '// Sin pendientes para este subsistema.',
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
-                    )
-                  else
-                    ...pendientes.map((tarea) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                tarea['titulo'],
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 14,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            AppButton(
-                              label: 'Completar',
-                              variant: AppButtonVariant.primary,
-                              onPressed: () async {
-                                try {
-                                  await _taskRepository
-                                      .deleteTask(tarea['id'] as int);
-                                  setState(() {
-                                    pendientes.remove(tarea);
-                                  });
-                                  if (!mounted) return;
-                                  Navigator.pop(context);
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Error al completar la tarea'),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                ],
               ),
             );
           },
@@ -882,6 +845,12 @@ class _PendingScreenState extends State<PendingScreen> {
               const SizedBox(height: 8),
               _detailRow('Creado por', tarea['nombreCreador'] ?? 'Anónimo'),
               const SizedBox(height: 8),
+              _detailRow(
+                  'Responsables',
+                  _nombresResponsables(
+                      (tarea['responsableIds'] as List?)?.cast<int>() ??
+                          const [])),
+              const SizedBox(height: 8),
               Text(
                 'Prioridad: ${tarea['urgencia']}',
                 style: TextStyle(
@@ -890,6 +859,36 @@ class _PendingScreenState extends State<PendingScreen> {
                   color: _getUrgenciaColor(tarea['urgencia']),
                   letterSpacing: 1.2,
                 ),
+              ),
+              const SizedBox(height: 20),
+              AppButton(
+                label: 'Marcar como completada',
+                icon: Icons.check_circle_outline,
+                fullWidth: true,
+                glow: true,
+                onPressed: () async {
+                  try {
+                    await _taskRepository.completeTask(tarea['id'] as int);
+                    if (!mounted) return;
+                    setState(() {
+                      tareasPorSubsistema[subsistema]?.remove(tarea);
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Tarea marcada como completada.'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Error al completar la tarea'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                },
               ),
             ],
           ),
