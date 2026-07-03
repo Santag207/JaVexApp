@@ -28,4 +28,16 @@ abstract class AuthRepository {
 
   /// Quita el flag y borra los datos persistidos.
   Future<void> disableBiometricLogin();
+
+  /// Cambia la contraseña del usuario autenticado. Verifica [currentPassword]
+  /// y aplica [newPassword]. Lanza si la contraseña actual es incorrecta.
+  Future<void> changePassword(String currentPassword, String newPassword);
+
+  /// Crea un nuevo usuario (solo superuser) vía Edge Function.
+  Future<void> createUser({
+    required String email,
+    required String password,
+    required String nombre,
+    required String apellidos,
+  });
 }

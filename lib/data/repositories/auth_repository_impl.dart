@@ -113,4 +113,25 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> disableBiometricLogin() async {
     await _secureStorage.clearAll();
   }
+
+  @override
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    await _apiService.changePassword(currentPassword, newPassword);
+  }
+
+  @override
+  Future<void> createUser({
+    required String email,
+    required String password,
+    required String nombre,
+    required String apellidos,
+  }) async {
+    await _apiService.createUser({
+      'email': email,
+      'password': password,
+      'nombre': nombre,
+      'apellidos': apellidos,
+    });
+  }
 }

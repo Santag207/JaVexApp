@@ -8,8 +8,9 @@ class TaskRepositoryImpl implements TaskRepository {
   TaskRepositoryImpl(this._apiService);
 
   @override
-  Future<List<Task>> getTasks({String? subsistema}) async {
-    final result = await _apiService.getTasks(subsistema: subsistema);
+  Future<List<Task>> getTasks({String? subsistema, String? estado}) async {
+    final result =
+        await _apiService.getTasks(subsistema: subsistema, estado: estado);
     return result.map((json) => Task.fromJson(json)).toList();
   }
 
@@ -17,6 +18,11 @@ class TaskRepositoryImpl implements TaskRepository {
   Future<Task> createTask(Map<String, dynamic> task) async {
     final result = await _apiService.createTask(task);
     return Task.fromJson(result);
+  }
+
+  @override
+  Future<void> completeTask(int id) async {
+    await _apiService.completeTask(id);
   }
 
   @override

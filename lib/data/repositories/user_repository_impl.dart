@@ -25,4 +25,10 @@ class UserRepositoryImpl implements UserRepository {
     final result = await _apiService.getMembers();
     return result.map((json) => Member.fromJson(json)).toList();
   }
+
+  @override
+  Future<List<User>> getUsers() async {
+    final result = await _apiService.getUsers();
+    return result.map((json) => User.fromJson(json)).toList();
+  }
 }

@@ -28,17 +28,34 @@ abstract class ApiService {
   /// la huella/rostro). Devuelve true si la sesión se restauró correctamente.
   Future<bool> restoreSession(String refreshToken);
 
-  /// Obtiene todas las tareas. Opcionalmente filtra por subsistema.
-  Future<List<Map<String, dynamic>>> getTasks({String? subsistema});
+  /// Cambia la contraseña del usuario autenticado. Reautentica con
+  /// [currentPassword] para verificarla y luego aplica [newPassword].
+  /// Lanza una excepción si la contraseña actual es incorrecta.
+  Future<void> changePassword(String currentPassword, String newPassword);
 
-  /// Crea una nueva tarea.
+  /// Crea un nuevo usuario (solo superuser) invocando la Edge Function
+  /// `create-user`. [payload] incluye email, password, nombre y apellidos.
+  Future<void> createUser(Map<String, dynamic> payload);
+
+  /// Obtiene todas las tareas. Opcionalmente filtra por subsistema y/o estado
+  /// ('pendiente' | 'completada'). Incluye los responsables embebidos.
+  Future<List<Map<String, dynamic>>> getTasks({String? subsistema, String? estado});
+
+  /// Crea una nueva tarea. Si [task] incluye una lista `responsables`
+  /// (IDs de `users`), los registra en `task_responsables`.
   Future<Map<String, dynamic>> createTask(Map<String, dynamic> task);
 
-  /// Elimina (completa) una tarea por su ID.
+  /// Marca una tarea como completada (estado='completada', completada_en=now()).
+  Future<void> completeTask(int id);
+
+  /// Elimina (borra físicamente) una tarea por su ID.
   Future<void> deleteTask(int id);
 
   /// Obtiene la lista de miembros activos.
   Future<List<Map<String, dynamic>>> getMembers();
+
+  /// Obtiene la lista completa de usuarios (perfiles de la tabla `users`).
+  Future<List<Map<String, dynamic>>> getUsers();
 
   /// Obtiene un usuario por su ID.
   Future<Map<String, dynamic>> getUser(int id);

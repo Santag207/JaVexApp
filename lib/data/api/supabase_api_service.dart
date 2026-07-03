@@ -77,6 +77,38 @@ class SupabaseApiService implements ApiService {
     }
   }
 
+  @override
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    final email = _client.auth.currentUser?.email;
+    if (email == null) {
+      throw StateError('No hay una sesión activa.');
+    }
+    // 1) Verificar la contraseña actual reautenticando.
+    try {
+      await _client.auth.signInWithPassword(
+        email: email,
+        password: currentPassword,
+      );
+    } on AuthException {
+      throw Exception('La contraseña actual es incorrecta.');
+    }
+    // 2) Aplicar la nueva contraseña.
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+  }
+
+  @override
+  Future<void> createUser(Map<String, dynamic> payload) async {
+    final res = await _client.functions.invoke('create-user', body: payload);
+    if (res.status != 200 && res.status != 201) {
+      final data = res.data;
+      final msg = data is Map && data['error'] != null
+          ? data['error'].toString()
+          : 'No se pudo crear el usuario (código ${res.status}).';
+      throw Exception(msg);
+    }
+  }
+
   /// Busca el perfil de la tabla `users` vinculado a la cuenta de Auth.
   Future<Map<String, dynamic>?> _profileByAuthId(String authId) async {
     try {
@@ -93,11 +125,14 @@ class SupabaseApiService implements ApiService {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getTasks({String? subsistema}) async {
+  Future<List<Map<String, dynamic>>> getTasks(
+      {String? subsistema, String? estado}) async {
     try {
-      final data = subsistema != null
-          ? await _client.from('tasks').select().eq('subsistema', subsistema)
-          : await _client.from('tasks').select();
+      // Embebe los responsables (task_responsables) en cada tarea.
+      var query = _client.from('tasks').select('*, task_responsables(user_id)');
+      if (subsistema != null) query = query.eq('subsistema', subsistema);
+      if (estado != null) query = query.eq('estado', estado);
+      final data = await query;
       return _asList(data);
     } catch (e) {
       print('Error al obtener tareas: $e');
@@ -108,13 +143,45 @@ class SupabaseApiService implements ApiService {
   @override
   Future<Map<String, dynamic>> createTask(Map<String, dynamic> task) async {
     try {
-      // El id lo genera la identidad de Postgres: no debe venir en el payload.
-      final payload = Map<String, dynamic>.from(task)..remove('id');
+      // El id lo genera la identidad de Postgres y los responsables van en su
+      // propia tabla: ninguno debe ir en el payload de `tasks`.
+      final responsables = (task['responsables'] as List?)
+              ?.map((e) => e is int ? e : int.parse(e.toString()))
+              .toList() ??
+          const <int>[];
+      final payload = Map<String, dynamic>.from(task)
+        ..remove('id')
+        ..remove('responsables');
       final data =
           await _client.from('tasks').insert(payload).select().single();
-      return Map<String, dynamic>.from(data);
+      final created = Map<String, dynamic>.from(data);
+
+      if (responsables.isNotEmpty) {
+        final taskId = created['id'];
+        final rows = responsables
+            .map((uid) => {'task_id': taskId, 'user_id': uid})
+            .toList();
+        await _client.from('task_responsables').insert(rows);
+        // Reflejar los responsables recién creados en el objeto devuelto.
+        created['task_responsables'] =
+            responsables.map((uid) => {'user_id': uid}).toList();
+      }
+      return created;
     } catch (e) {
       print('Error al crear tarea: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> completeTask(int id) async {
+    try {
+      await _client.from('tasks').update({
+        'estado': 'completada',
+        'completada_en': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', id);
+    } catch (e) {
+      print('Error al completar tarea: $e');
       rethrow;
     }
   }
@@ -136,6 +203,17 @@ class SupabaseApiService implements ApiService {
       return _asList(data);
     } catch (e) {
       print('Error al obtener miembros: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getUsers() async {
+    try {
+      final data = await _client.from('users').select();
+      return _asList(data);
+    } catch (e) {
+      print('Error al obtener usuarios: $e');
       return [];
     }
   }

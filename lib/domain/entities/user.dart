@@ -14,6 +14,10 @@ class User extends Equatable {
   final String liderSubsistema;
   final Map<String, int> tareasCompletadasPorSubsistema;
 
+  /// Rol de permisos del usuario: 'normal' | 'superuser'. El superuser puede
+  /// crear nuevos usuarios desde la app.
+  final String role;
+
   /// UUID de la cuenta en Supabase Auth (columna `auth_id`). Vacío si el perfil
   /// aún no está vinculado a una cuenta de Auth.
   final String authId;
@@ -31,8 +35,12 @@ class User extends Equatable {
     required this.subsistemas,
     required this.liderSubsistema,
     required this.tareasCompletadasPorSubsistema,
+    this.role = 'normal',
     this.authId = '',
   });
+
+  /// True si el usuario tiene permisos para crear nuevos usuarios.
+  bool get isSuperuser => role == 'superuser';
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -54,6 +62,7 @@ class User extends Equatable {
           (json['tareasCompletadasPorSubsistema'] as Map<String, dynamic>?)
                   ?.map((key, value) => MapEntry(key, value as int)) ??
               {},
+      role: json['role'] as String? ?? 'normal',
       authId: json['auth_id'] as String? ?? '',
     );
   }
@@ -72,6 +81,7 @@ class User extends Equatable {
       'subsistemas': subsistemas,
       'liderSubsistema': liderSubsistema,
       'tareasCompletadasPorSubsistema': tareasCompletadasPorSubsistema,
+      'role': role,
       'auth_id': authId,
     };
   }
