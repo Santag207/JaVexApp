@@ -9,8 +9,6 @@ import '../../domain/entities/task.dart';
 import 'bloc/home_bloc.dart';
 import 'bloc/home_event.dart';
 import 'bloc/home_state.dart';
-import '../auth/bloc/auth_bloc.dart';
-import '../auth/bloc/auth_state.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -182,20 +180,11 @@ class _HomeView extends StatelessWidget {
   }
 }
 
-/// Encabezado compacto del Home: logo pequeño (glow blanco) + título holograma
-/// "Hello here!" y, a la derecha, el botón de acceso NFC al laboratorio.
+/// Encabezado compacto del Home: logo pequeño (glow blanco) y, a la derecha,
+/// el botón de acceso NFC al laboratorio.
 class _HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    String nombre = '';
-    if (authState is AuthAuthenticated) {
-      nombre = authState.user.nombre;
-    } else if (authState is AuthAuthenticatedAwaitingBiometricChoice) {
-      nombre = authState.user.nombre;
-    }
-    final saludo = nombre.isEmpty ? 'Hola' : 'Hola, $nombre';
-
     return Row(
       children: [
         Container(
@@ -211,11 +200,7 @@ class _HomeHeader extends StatelessWidget {
           ),
           child: Image.asset('assets/logo.png', height: 52, width: 52),
         ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: HologramText(saludo, size: 16),
-        ),
-        const SizedBox(width: 12),
+        const Spacer(),
         _NfcButton(),
       ],
     );
