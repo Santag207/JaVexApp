@@ -11,8 +11,6 @@ import '../../features/inventory/inventory_screen.dart';
 import '../../features/nfc/nfc_screen.dart';
 import '../../features/forms/forms_screen.dart';
 import '../../features/forms/document_management_form_screen.dart';
-import '../../features/forms/text_form_screen.dart';
-import '../../features/forms/weekly_forms.dart';
 
 class AppRouter {
   static GoRouter createRouter() {
@@ -149,40 +147,6 @@ class AppRouter {
           pageBuilder: (context, state) => CustomTransitionPage<void>(
             key: state.pageKey,
             child: const DocumentManagementFormScreen(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        ),
-
-        GoRoute(
-          name: 'weeklyIndividualForm',
-          path: '/forms/weekly-individual',
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
-            key: state.pageKey,
-            child: const TextFormScreen(
-              formType: 'weekly_individual',
-              title: 'REPORTE INDIVIDUAL',
-              fields: weeklyIndividualFields,
-            ),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        ),
-
-        GoRoute(
-          name: 'weeklyCoordinatorForm',
-          path: '/forms/weekly-coordinator',
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
-            key: state.pageKey,
-            child: const TextFormScreen(
-              formType: 'weekly_coordinator',
-              title: 'REPORTE COORDINADOR',
-              fields: weeklyCoordinatorFields,
-            ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);

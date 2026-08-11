@@ -92,4 +92,34 @@ abstract class ApiService {
   /// `auth.uid()`). `answers` es un objeto con las respuestas por pregunta.
   Future<Map<String, dynamic>> createFormTextSubmission(
       Map<String, dynamic> submission);
+
+  /// Genera una URL firmada temporal para descargar/ver un archivo del bucket
+  /// `form-files` a partir de su `storage_path`.
+  Future<String> createSignedFormFileUrl(String storagePath);
+
+  // ============ Formularios modulares (definiciones) ============
+
+  /// Lista los formularios configurables (tabla `forms`), ordenados por `orden`.
+  Future<List<Map<String, dynamic>>> getForms();
+
+  /// Lista los campos de un formulario (tabla `form_fields`), por `orden`.
+  Future<List<Map<String, dynamic>>> getFormFields(int formId);
+
+  /// Crea un formulario. Solo superuser (RLS). Devuelve el registro creado.
+  Future<Map<String, dynamic>> createForm(Map<String, dynamic> form);
+
+  /// Actualiza un formulario por su id. Solo superuser (RLS).
+  Future<Map<String, dynamic>> updateForm(int id, Map<String, dynamic> data);
+
+  /// Elimina un formulario por su id (borra en cascada sus campos). Superuser.
+  Future<void> deleteForm(int id);
+
+  /// Crea un campo de formulario. Solo superuser (RLS).
+  Future<Map<String, dynamic>> createField(Map<String, dynamic> field);
+
+  /// Actualiza un campo por su id. Solo superuser (RLS).
+  Future<Map<String, dynamic>> updateField(int id, Map<String, dynamic> data);
+
+  /// Elimina un campo por su id. Solo superuser (RLS).
+  Future<void> deleteField(int id);
 }

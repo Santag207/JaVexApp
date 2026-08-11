@@ -9,6 +9,33 @@ class FormsBloc extends Bloc<FormsEvent, FormsState> {
   FormsBloc({required this.formsRepository}) : super(const FormsInitial()) {
     on<SubmitFormFilesRequested>(_onSubmitFormFilesRequested);
     on<SubmitFormTextRequested>(_onSubmitFormTextRequested);
+    on<SubmitDynamicFormRequested>(_onSubmitDynamicFormRequested);
+  }
+
+  Future<void> _onSubmitDynamicFormRequested(
+    SubmitDynamicFormRequested event,
+    Emitter<FormsState> emit,
+  ) async {
+    emit(const FormsUploading());
+    try {
+      final answers = Map<String, dynamic>.from(event.answers);
+      for (final f in event.files) {
+        final ref = await formsRepository.uploadFieldFile(
+          formKey: event.formKey,
+          fieldKey: f.fieldKey,
+          fileName: f.fileName,
+          bytes: f.bytes,
+        );
+        answers[f.fieldKey] = ref;
+      }
+      await formsRepository.submitText(
+        formType: event.formKey,
+        answers: answers,
+      );
+      emit(const FormsSuccess(message: 'Formulario enviado correctamente.'));
+    } catch (e) {
+      emit(FormsError(message: 'Error al enviar el formulario: ${e.toString()}'));
+    }
   }
 
   Future<void> _onSubmitFormFilesRequested(

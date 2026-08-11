@@ -53,3 +53,37 @@ class SubmitFormTextRequested extends FormsEvent {
   @override
   List<Object?> get props => [formType, answers];
 }
+
+/// Un archivo seleccionado para un campo de tipo `archivo` de un formulario
+/// modular.
+class FieldFileUpload extends Equatable {
+  final String fieldKey;
+  final String fileName;
+  final Uint8List bytes;
+
+  const FieldFileUpload({
+    required this.fieldKey,
+    required this.fileName,
+    required this.bytes,
+  });
+
+  @override
+  List<Object?> get props => [fieldKey, fileName];
+}
+
+/// Envía un formulario modular: sube los archivos de sus campos `archivo`,
+/// mezcla las referencias en `answers` y registra la respuesta.
+class SubmitDynamicFormRequested extends FormsEvent {
+  final String formKey;
+  final Map<String, dynamic> answers;
+  final List<FieldFileUpload> files;
+
+  const SubmitDynamicFormRequested({
+    required this.formKey,
+    required this.answers,
+    this.files = const [],
+  });
+
+  @override
+  List<Object?> get props => [formKey, answers, files];
+}

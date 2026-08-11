@@ -354,4 +354,85 @@ class SupabaseApiService implements ApiService {
       rethrow;
     }
   }
+
+  @override
+  Future<String> createSignedFormFileUrl(String storagePath) async {
+    // URL firmada válida por 1 hora.
+    return _client.storage.from(_formsBucket).createSignedUrl(storagePath, 3600);
+  }
+
+  // ============ Formularios modulares (definiciones) ============
+
+  @override
+  Future<List<Map<String, dynamic>>> getForms() async {
+    try {
+      final data = await _client.from('forms').select().order('orden');
+      return _asList(data);
+    } catch (e) {
+      print('Error al obtener formularios: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getFormFields(int formId) async {
+    try {
+      final data = await _client
+          .from('form_fields')
+          .select()
+          .eq('form_id', formId)
+          .order('orden');
+      return _asList(data);
+    } catch (e) {
+      print('Error al obtener campos del formulario: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> createForm(Map<String, dynamic> form) async {
+    final payload = Map<String, dynamic>.from(form)..remove('id');
+    final data = await _client.from('forms').insert(payload).select().single();
+    return Map<String, dynamic>.from(data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateForm(
+      int id, Map<String, dynamic> data) async {
+    final payload = Map<String, dynamic>.from(data)..remove('id');
+    final result =
+        await _client.from('forms').update(payload).eq('id', id).select().single();
+    return Map<String, dynamic>.from(result);
+  }
+
+  @override
+  Future<void> deleteForm(int id) async {
+    await _client.from('forms').delete().eq('id', id);
+  }
+
+  @override
+  Future<Map<String, dynamic>> createField(Map<String, dynamic> field) async {
+    final payload = Map<String, dynamic>.from(field)..remove('id');
+    final data =
+        await _client.from('form_fields').insert(payload).select().single();
+    return Map<String, dynamic>.from(data);
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateField(
+      int id, Map<String, dynamic> data) async {
+    final payload = Map<String, dynamic>.from(data)..remove('id');
+    final result = await _client
+        .from('form_fields')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+    return Map<String, dynamic>.from(result);
+  }
+
+  @override
+  Future<void> deleteField(int id) async {
+    await _client.from('form_fields').delete().eq('id', id);
+  }
 }
